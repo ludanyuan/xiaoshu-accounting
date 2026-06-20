@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>小树Li 记账系统</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --green:#27ae60;--green-light:#d5f5e3;
+  --red:#e74c3c;--red-light:#fde8e7;
+  --blue:#2980b9;--blue-light:#ebf5fb;
+  --orange:#f39c12;--purple:#8e44ad;
+  --teal:#16a085;--gray:#7f8c8d;
+  --dark:#2c3e50;--light:#f5f6fa;
+  --white:#fff;--border:#e0e0e0;
+}
+body{font-family:'PingFang SC','Microsoft YaHei',sans-serif;background:var(--light);color:var(--dark);min-height:100vh;font-size:14px}
+/* ── header ── */
+#app-header{
+  position:sticky;top:0;z-index:200;
+  background:var(--dark);color:#fff;
+  display:flex;align-items:center;gap:12px;padding:0 16px;height:52px;
+  box-shadow:0 2px 8px rgba(0,0,0,.25)
+}
+#app-header h1{font-size:16px;white-space:nowrap;letter-spacing:.5px}
+#main-nav{display:flex;gap:3px;flex-wrap:wrap}
+#main-nav button{
+  padding:5px 12px;border:none;border-radius:4px;cursor:pointer;
+  background:rgba(255,255,255,.1);color:#fff;font-size:13px;
+  transition:background .15s;font-family:inherit
+}
+#main-nav button.active{background:var(--green)}
+#main-nav button:hover:not(.active){background:rgba(255,255,255,.2)}
+.header-actions{margin-left:auto;display:flex;gap:6px}
+/* ── summary bar ── */
+#summary-bar{
+  background:#fff;border-bottom:1px solid var(--border);
+  display:flex;gap:0;padding:0
+}
+.sum-item{
+  flex:1;padding:10px 16px;text-align:center;
+  border-right:1px solid var(--border)
+}
+.sum-item:last-child{border-right:none}
+.sum-item .s-label{font-size:11px;color:var(--gray);margin-bottom:2px}
+.sum-item .s-val{font-size:17px;font-weight:700}
+.c-green{color:var(--green)}.c-red{color:var(--red)}.c-blue{color:var(--blue)}
+/* ── main ── */
+#app-body{padding:16px;max-width:1200px;margin:0 auto}
+/* ── card ── */
+.card{background:#fff;border-radius:8px;padding:16px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.card-title{font-size:12px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+/* ── grid ── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+@media(max-width:700px){.g2,.g3{grid-template-columns:1fr}}
+/* ── flex helpers ── */
+.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.row-between{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+/* ── table ── */
+.tbl-wrap{overflow-x:auto}
+table.t{width:100%;border-collapse:collapse;font-size:13px}
+table.t th{
+  background:var(--light);padding:8px 10px;text-align:left;
+  font-weight:600;white-space:nowrap;border-bottom:2px solid var(--border)
+}
+table.t td{padding:7px 10px;border-bottom:1px solid #f0f0f0;vertical-align:middle}
+table.t tr:hover td{background:#fafafa}
+table.t tfoot td{background:var(--light);font-weight:700;border-top:2px solid var(--border)}
+.tr{text-align:right}.tc{text-align:center}
+/* ── form ── */
+.fg{display:flex;flex-direction:column;gap:3px}
+.fg label{font-size:11px;color:var(--gray);font-weight:600}
+input[type=text],input[type=date],input[type=number],select,textarea{
+  padding:6px 9px;border:1px solid var(--border);border-radius:4px;
+  font-size:13px;color:var(--dark);font-family:inherit;background:#fff
+}
+input[type=text]:focus,input[type=date]:focus,input[type=number]:focus,select:focus{
+  outline:none;border-color:var(--blue)
+}
+/* ── buttons ── */
+.btn{
+  padding:6px 14px;border:none;border-radius:4px;cursor:pointer;
+  font-size:13px;font-family:inherit;transition:opacity .15s;white-space:nowrap
+}
+.btn:hover{opacity:.85}
+.btn-green{background:var(--green);color:#fff}
+.btn-red{background:var(--red);color:#fff}
+.btn-gray{background:var(--light);color:var(--dark);border:1px solid var(--border)}
+.btn-blue{background:var(--blue);color:#fff}
+.btn-sm{padding:3px 8px;font-size:12px}
+/* ── badge ── */
+.badge{display:inline-block;padding:2px 7px;border-radius:10px;font-size:11px;font-weight:600}
+.badge-in{background:var(--green-light);color:#1a6b3a}
+.badge-out{background:var(--red-light);color:#a93226}
+.badge-tr{background:var(--blue-light);color:#1a4a6b}
+/* ── stat box ── */
+.sbox{padding:10px 16px;text-align:center}
+.sbox .snum{font-size:20px;font-weight:700}
+.sbox .slbl{font-size:11px;color:var(--gray);margin-top:2px}
+/* ── calendar ── */
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cal-hdr{text-align:center;font-size:11px;font-weight:600;color:var(--gray);padding:4px}
+.cal-day{
+  border:1px solid #ececec;border-radius:4px;padding:5px;
+  min-height:64px;font-size:12px;background:#fff
+}
+.cal-day.other{background:#fafafa;color:#ccc}
+.cal-day.today{border-color:var(--blue);background:var(--blue-light)}
+.cal-dn{font-weight:600;margin-bottom:2px}
+.cal-exp{color:var(--red);font-size:11px}
+.cal-inc{color:var(--green);font-size:11px}
+/* ── progress ── */
+.prog-wrap{background:#eee;border-radius:3px;height:6px;width:100%;min-width:60px}
+.prog-fill{height:100%;border-radius:3px;transition:width .3s}
+/* ── legend ── */
+.legend{font-size:12px}
+.leg-item{display:flex;align-items:center;gap:6px;margin-bottom:5px}
+.leg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+/* ── modal ── */
+.modal-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);
+  z-index:500;align-items:center;justify-content:center
+}
+.modal-overlay.open{display:flex}
+.modal{
+  background:#fff;border-radius:10px;padding:22px;
+  width:92%;max-width:580px;max-height:90vh;overflow-y:auto;
+  box-shadow:0 8px 32px rgba(0,0,0,.2)
+}
+.modal h2{font-size:16px;margin-bottom:16px}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;padding-top:12px;border-top:1px solid var(--border)}
+/* ── tag pills ── */
+.pill{
+  display:inline-flex;align-items:center;gap:4px;
+  background:#f0f0f0;padding:4px 10px;border-radius:16px;font-size:13px;margin:2px
+}
+.pill-del{border:none;background:none;cursor:pointer;color:#aaa;font-size:15px;line-height:1;padding:0}
+.pill-del:hover{color:var(--red)}
+/* ── inner tabs ── */
+.itabs{display:flex;gap:4px;margin-bottom:12px;flex-wrap:wrap}
+.itab{
+  padding:4px 12px;border:1px solid var(--border);border-radius:4px;
+  cursor:pointer;font-size:12px;background:#fff;font-family:inherit
+}
+.itab.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}
+</style>
+</head>
+<body>
+
+<div id="app-header">
+  <h1>🌱 小树Li 记账</h1>
+  <nav id="main-nav"></nav>
+  <div class="header-actions">
+    <button class="btn btn-gray btn-sm" onclick="exportJSON()">⬇ 导出</button>
+    <button class="btn btn-gray btn-sm" onclick="document.getElementById('imp').click()">⬆ 导入</button>
+    <input type="file" id="imp" accept=".json" style="display:none" onchange="importJSON(event)">
+  </div>
+</div>
+
+<div id="summary-bar"></div>
+<div id="app-body"></div>
+
+<!-- Transaction Modal -->
+<div class="modal-overlay" id="tx-modal">
+  <div class="modal">
+    <h2 id="modal-ttl">记一笔</h2>
+    <div class="row" style="margin-bottom:10px">
+      <div class="fg"><label>日期</label><input type="date" id="f-date"></div>
+      <div class="fg"><label>成员</label><select id="f-member"></select></div>
+      <div class="fg"><label>账户</label><select id="f-account"></select></div>
+    </div>
+    <div class="row" style="margin-bottom:10px">
+      <div class="fg"><label>类型</label>
+        <select id="f-type" onchange="cascadeType()">
+          <option>支出</option><option>收入</option><option>转账</option>
+        </select>
+      </div>
+      <div class="fg"><label>收支分类</label><select id="f-cat" onchange="cascadeCat()"></select></div>
+      <div class="fg"><label>明细说明</label><select id="f-sub"></select></div>
+    </div>
+    <div class="row" style="margin-bottom:10px">
+      <div class="fg"><label>收入金额 ¥</label><input type="number" id="f-inc" min="0" step="0.01" placeholder="0.00"></div>
+      <div class="fg"><label>支出金额 ¥</label><input type="number" id="f-exp" min="0" step="0.01" placeholder="0.00"></div>
+      <div class="fg"><label>标签</label><select id="f-tag"></select></div>
+    </div>
+    <div class="fg"><label>备注</label><input type="text" id="f-note" placeholder="选填"></div>
+    <div class="modal-footer">
+      <button class="btn btn-gray" onclick="closeModal()">取消</button>
+      <button class="btn btn-green" onclick="saveTx()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════
+const KEY = 'xiaoshu_v2';
+const COLORS = ['#27ae60','#2980b9','#e74c3c','#f39c12','#8e44ad','#16a085','#e67e22','#c0392b','#d35400','#2c3e50','#7f8c8d','#1abc9c'];
+const TABS = [
+  {id:'ledger',  lbl:'📒 收支记录'},
+  {id:'monthly', lbl:'📅 本月分析'},
+  {id:'annual',  lbl:'📊 年度分析'},
+  {id:'assets',  lbl:'🏦 资产盘点'},
+  {id:'budget',  lbl:'💰 预算管理'},
+  {id:'cats',    lbl:'⚙️ 自定义分类'},
+];
+
+// ═══════════════════════════════════════════════
+// DEFAULT STATE
+// ═══════════════════════════════════════════════
+function mkDefaultCats() {
+  return {
+    income:   ['主动收入','投资收入','被动收入','转移收入','其他收入'],
+    expense:  ['生活基础','品质消费','自我投资','财务管理','人情往来','健康管理','其他支出'],
+    transfer: ['债务管理','账户调度'],
+    sub: {
+      '主动收入': ['工资','奖金','兼职','作曲','教学','录音','混音'],
+      '投资收入': ['银行理财','基金收益','设备出租','房屋出租'],
+      '被动收入': ['版权收入','课程分成','自媒体流量分成','存款利息'],
+      '转移收入': ['红包','礼物','退税'],
+      '其他收入': ['二手商品','偶然性收入'],
+      '生活基础': ['三餐基础','外出吃饭','住房水电','交通出行','服装鞋袜','日用品','话费'],
+      '品质消费': ['快乐解馋','休闲娱乐','旅游','幸福感购物','水果','会员','养生健康'],
+      '自我投资': ['上课','教育','书籍','考证','爱好投资','专辑制作','音乐订阅'],
+      '财务管理': ['未来储备','利息还款'],
+      '人情往来': ['家人','礼金','礼物','红包','捐赠','请客'],
+      '健康管理': ['医疗保险','药品'],
+      '其他支出': ['阶段-搬家','意外支出','烂账'],
+      '债务管理': ['住房贷款','汽车贷款','信用卡还款','花呗结清'],
+      '账户调度': ['电子钱包充值','银行卡互转','电子钱包提现','垫付','报销'],
+    },
+    accounts: ['现金','零钱','零钱通','余额宝','支付宝余额','招商银行(8579)','建设银行6**3','中国银行8**7','农业银行9**0','招商银行7**9','民生银行4**7','他人借款','待报销款项','招商银行(8560)','农业银行(0343)','建行信用卡A','交行信用卡B','花呗','借呗','白条','金条'],
+    members: ['自己','成员2','共同'],
+    tags: ['生活必要支出','变动性支出','浪费后悔','超棒'],
+  };
+}
+
+function mkDefaultAssets() {
+  return {
+    startDate: today(),
+    current: [
+      {sg:'现金',   name:'现金',          init:0, note:''},
+      {sg:'微信',   name:'零钱',           init:0, note:'生活支出'},
+      {sg:'微信',   name:'零钱通',          init:0, note:''},
+      {sg:'支付宝', name:'余额宝',          init:0, note:'购物'},
+      {sg:'支付宝', name:'支付宝余额',       init:0, note:''},
+      {sg:'银行',   name:'招商银行(8579)',  init:0, note:'存款'},
+      {sg:'应收',   name:'他人借款',         init:0, note:''},
+      {sg:'应收',   name:'待报销款项',        init:0, note:''},
+      {sg:'其他',   name:'未发年终奖',        init:0, note:''},
+    ],
+    invest: [
+      {sg:'证券', name:'基金1', init:0, note:''},
+      {sg:'证券', name:'基金2', init:0, note:''},
+      {sg:'保险', name:'保险1', init:0, note:''},
+      {sg:'保险', name:'保险2', init:0, note:''},
+    ],
+    fixed: [
+      {sg:'固定资产', name:'自有汽车', init:0, note:''},
+      {sg:'固定资产', name:'自用住房', init:0, note:'住房首付'},
+    ],
+    longLiab: [
+      {sg:'长期负债', name:'住房贷款账户', init:0, note:'每期4800'},
+      {sg:'长期负债', name:'汽车贷款账户', init:0, note:'每期2800'},
+    ],
+    shortLiab: [
+      {sg:'银行卡', name:'招商银行(8560)', init:0,      note:''},
+      {sg:'银行卡', name:'农业银行(0343)', init:0,      note:''},
+      {sg:'支付宝', name:'建行信用卡A',   init:507.42, note:''},
+      {sg:'支付宝', name:'交行信用卡B',   init:0,      note:''},
+      {sg:'京东',   name:'花呗',          init:0,      note:''},
+      {sg:'京东',   name:'借呗',          init:0,      note:''},
+      {sg:'借款',   name:'白条',          init:0,      note:''},
+      {sg:'借款',   name:'金条',          init:0,      note:''},
+    ],
+  };
+}
+
+function mkDefaultBudget() {
+  const n = new Date(), y = n.getFullYear(), m = n.getMonth()+1;
+  const last = new Date(y, m, 0).getDate();
+  return {
+    startDate: `${y}-${p2(m)}-01`,
+    endDate:   `${y}-${p2(m)}-${last}`,
+    payDay: 30,
+    items: [
+      {cat:'生活基础',sub:'三餐基础',   budget:500},
+      {cat:'生活基础',sub:'外出吃饭',   budget:100},
+      {cat:'生活基础',sub:'住房水电',   budget:100},
+      {cat:'生活基础',sub:'交通出行',   budget:100},
+      {cat:'生活基础',sub:'服装鞋袜',   budget:100},
+      {cat:'生活基础',sub:'日用品',     budget:50},
+      {cat:'生活基础',sub:'话费',       budget:100},
+      {cat:'品质消费',sub:'快乐解馋',   budget:200},
+      {cat:'品质消费',sub:'休闲娱乐',   budget:100},
+      {cat:'品质消费',sub:'旅游',       budget:100},
+      {cat:'品质消费',sub:'幸福感购物', budget:100},
+      {cat:'品质消费',sub:'水果',       budget:100},
+      {cat:'品质消费',sub:'会员',       budget:100},
+      {cat:'自我投资',sub:'上课',       budget:1000},
+      {cat:'人情往来',sub:'请客',       budget:300},
+      {cat:'其他支出',sub:'意外支出',   budget:100},
+    ],
+  };
+}
+
+function mkState() {
+  return {
+    tab: 'ledger',
+    cats: mkDefaultCats(),
+    txns: [
+      {id:'demo1',date:'2025-04-22',member:'自己',account:'零钱',type:'收入',cat:'主动收入',sub:'作曲',inc:1000,exp:0,tag:'',note:''}
+    ],
+    assets: mkDefaultAssets(),
+    budget: mkDefaultBudget(),
+    mv: {year: new Date().getFullYear(), month: new Date().getMonth()+1, member:'全部'},
+    av: {year: new Date().getFullYear()},
+  };
+}
+
+// ═══════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════
+let S = {};
+let editId = null;
+
+function load() {
+  try {
+    const r = localStorage.getItem(KEY);
+    S = r ? deepMerge(mkState(), JSON.parse(r)) : mkState();
+  } catch { S = mkState(); }
+}
+
+function save() { localStorage.setItem(KEY, JSON.stringify(S)); }
+
+function deepMerge(t, s) {
+  if (Array.isArray(s)) return s;
+  if (typeof s !== 'object' || s === null) return s !== undefined ? s : t;
+  if (typeof t !== 'object' || t === null) return s;
+  const o = {...t};
+  for (const k of Object.keys(s)) o[k] = deepMerge(t[k], s[k]);
+  return o;
+}
+
+function uid() { return Date.now().toString(36)+Math.random().toString(36).slice(2,5); }
+
+// ═══════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════
+function p2(n) { return String(n).padStart(2,'0'); }
+function today() { return new Date().toISOString().slice(0,10); }
+function fmt(n) {
+  const v = parseFloat(n);
+  return isNaN(v) ? '0.00' : v.toLocaleString('zh-CN',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function fmtShort(n) {
+  const v = parseFloat(n)||0;
+  if (Math.abs(v)>=10000) return (v/10000).toFixed(1)+'万';
+  return v.toFixed(0);
+}
+function sumF(arr, f) { return arr.reduce((s,x)=>s+(parseFloat(x[f])||0), 0); }
+
+function filterTx(f={}) {
+  return S.txns.filter(t=>{
+    if (f.year   && new Date(t.date).getFullYear()  !== f.year)   return false;
+    if (f.month  && new Date(t.date).getMonth()+1   !== f.month)  return false;
+    if (f.start  && t.date < f.start) return false;
+    if (f.end    && t.date > f.end)   return false;
+    if (f.type   && t.type  !== f.type)   return false;
+    if (f.member && f.member !== '全部' && t.member !== f.member) return false;
+    if (f.account && t.account !== f.account) return false;
+    if (f.cat    && t.cat   !== f.cat)    return false;
+    return true;
+  });
+}
+
+function acctChange(name) {
+  // net flow into this account (income - expense)
+  const inc = sumF(filterTx({account:name, type:'收入'}), 'inc');
+  const exp = sumF(filterTx({account:name, type:'支出'}), 'exp');
+  return inc - exp;
+}
+
+// ═══════════════════════════════════════════════
+// RENDER SHELL
+// ═══════════════════════════════════════════════
+function renderNav() {
+  document.getElementById('main-nav').innerHTML = TABS.map(t=>
+    `<button onclick="go('${t.id}')" class="${S.tab===t.id?'active':''}">${t.lbl}</button>`
+  ).join('');
+}
+
+function renderSummary() {
+  const inc = sumF(filterTx({type:'收入'}), 'inc');
+  const exp = sumF(filterTx({type:'支出'}), 'exp');
+  const bal = inc - exp;
+  document.getElementById('summary-bar').innerHTML = `
+    <div class="sum-item"><div class="s-label">累计收入</div><div class="s-val c-green">¥${fmt(inc)}</div></div>
+    <div class="sum-item"><div class="s-label">累计支出</div><div class="s-val c-red">¥${fmt(exp)}</div></div>
+    <div class="sum-item"><div class="s-label">净结余</div><div class="s-val c-blue">¥${fmt(bal)}</div></div>
+    <div class="sum-item"><div class="s-label">记账笔数</div><div class="s-val">${S.txns.length}</div></div>
+  `;
+}
+
+function go(id) {
+  S.tab = id; save();
+  renderNav();
+  renderBody();
+}
+
+function renderBody() {
+  const el = document.getElementById('app-body');
+  switch(S.tab) {
+    case 'ledger':  el.innerHTML = ledgerHTML();  break;
+    case 'monthly': el.innerHTML = monthlyHTML(); afterMonthly(); break;
+    case 'annual':  el.innerHTML = annualHTML();  afterAnnual();  break;
+    case 'assets':  el.innerHTML = assetsHTML();  afterAssets();  break;
+    case 'budget':  el.innerHTML = budgetHTML();  break;
+    case 'cats':    el.innerHTML = catsHTML();    break;
+  }
+}
+
+// ═══════════════════════════════════════════════
+// TAB 1 · 收支记录
+// ═══════════════════════════════════════════════
+function ledgerHTML() {
+  const txns = [...S.txns].sort((a,b)=>b.date.localeCompare(a.date));
+  const inc  = sumF(txns.filter(t=>t.type==='收入'),'inc');
+  const exp  = sumF(txns.filter(t=>t.type==='支出'),'exp');
+
+  const rows = txns.map(t=>`
+    <tr>
+      <td>${t.date}</td>
+      <td>${t.member||''}</td>
+      <td>${t.account||''}</td>
+      <td><span class="badge badge-${t.type==='收入'?'in':t.type==='支出'?'out':'tr'}">${t.type}</span></td>
+      <td>${t.cat||''}</td>
+      <td>${t.sub||''}</td>
+      <td class="tr ${t.inc>0?'c-green':''}">${t.inc>0?'¥'+fmt(t.inc):''}</td>
+      <td class="tr ${t.exp>0?'c-red':''}">${t.exp>0?'¥'+fmt(t.exp):''}</td>
+      <td>${t.tag||''}</td>
+      <td>${t.note||''}</td>
+      <td>
+        <button class="btn btn-gray btn-sm" onclick="openEdit('${t.id}')">编辑</button>
+        <button class="btn btn-red  btn-sm" onclick="delTx('${t.id}')">删</button>
+      </td>
+    </tr>`).join('') || `<tr><td colspan="11" style="text-align:center;padding:24px;color:var(--gray)">暂无记录，点击「记一笔」开始</td></tr>`;
+
+  return `<div class="card">
+    <div class="row-between" style="margin-bottom:12px">
+      <div class="row">
+        <div class="sbox"><div class="snum c-green">¥${fmt(inc)}</div><div class="slbl">总收入</div></div>
+        <div class="sbox"><div class="snum c-red">¥${fmt(exp)}</div><div class="slbl">总支出</div></div>
+        <div class="sbox"><div class="snum c-blue">¥${fmt(inc-exp)}</div><div class="slbl">盈余</div></div>
+      </div>
+      <button class="btn btn-green" onclick="openAdd()">＋ 记一笔</button>
+    </div>
+    <div class="tbl-wrap"><table class="t">
+      <thead><tr><th>日期</th><th>成员</th><th>账户</th><th>类型</th><th>收支分类</th><th>明细</th>
+        <th class="tr">收入</th><th class="tr">支出</th><th>标签</th><th>备注</th><th>操作</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>
+  </div>`;
+}
+
+// ── Modal ──
+function fillModalDropdowns() {
+  const c = S.cats;
+  document.getElementById('f-member').innerHTML = c.members.map(m=>`<option>${m}</option>`).join('');
+  document.getElementById('f-account').innerHTML = c.accounts.map(a=>`<option>${a}</option>`).join('');
+  document.getElementById('f-tag').innerHTML = ['<option value="">(无标签)</option>',...c.tags.map(t=>`<option>${t}</option>`)].join('');
+  cascadeType();
+}
+
+function cascadeType() {
+  const type = document.getElementById('f-type').value;
+  const c = S.cats;
+  const list = type==='收入' ? c.income : type==='支出' ? c.expense : c.transfer;
+  document.getElementById('f-cat').innerHTML = list.map(x=>`<option>${x}</option>`).join('');
+  // auto income/expense toggle
+  const fi = document.getElementById('f-inc'), fe = document.getElementById('f-exp');
+  fi.style.opacity = type==='支出' ? '.5' : '1';
+  fe.style.opacity = type==='收入' ? '.5' : '1';
+  cascadeCat();
+}
+
+function cascadeCat() {
+  const cat = document.getElementById('f-cat').value;
+  const subs = S.cats.sub[cat] || [];
+  document.getElementById('f-sub').innerHTML = ['<option value="">(不选)</option>',...subs.map(s=>`<option>${s}</option>`)].join('');
+}
+
+function openAdd() {
+  editId = null;
+  document.getElementById('modal-ttl').textContent = '记一笔';
+  document.getElementById('f-date').value = today();
+  document.getElementById('f-type').value = '支出';
+  document.getElementById('f-inc').value = '';
+  document.getElementById('f-exp').value = '';
+  document.getElementById('f-note').value = '';
+  fillModalDropdowns();
+  document.getElementById('tx-modal').classList.add('open');
+}
+
+function openEdit(id) {
+  const t = S.txns.find(x=>x.id===id); if (!t) return;
+  editId = id;
+  document.getElementById('modal-ttl').textContent = '编辑记录';
+  document.getElementById('f-date').value   = t.date;
+  document.getElementById('f-type').value   = t.type;
+  document.getElementById('f-inc').value    = t.inc||'';
+  document.getElementById('f-exp').value    = t.exp||'';
+  document.getElementById('f-note').value   = t.note||'';
+  fillModalDropdowns();
+  document.getElementById('f-member').value  = t.member||'';
+  document.getElementById('f-account').value = t.account||'';
+  document.getElementById('f-cat').value     = t.cat||'';
+  cascadeCat();
+  document.getElementById('f-sub').value = t.sub||'';
+  document.getElementById('f-tag').value = t.tag||'';
+  document.getElementById('tx-modal').classList.add('open');
+}
+
+function closeModal() { document.getElementById('tx-modal').classList.remove('open'); }
+
+function saveTx() {
+  const type = document.getElementById('f-type').value;
+  const rawInc = parseFloat(document.getElementById('f-inc').value)||0;
+  const rawExp = parseFloat(document.getElementById('f-exp').value)||0;
+  const t = {
+    id:      editId || uid(),
+    date:    document.getElementById('f-date').value    || today(),
+    member:  document.getElementById('f-member').value,
+    account: document.getElementById('f-account').value,
+    type,
+    cat:     document.getElementById('f-cat').value,
+    sub:     document.getElementById('f-sub').value,
+    inc:     type==='支出' ? 0 : rawInc,
+    exp:     type==='收入' ? 0 : rawExp,
+    tag:     document.getElementById('f-tag').value,
+    note:    document.getElementById('f-note').value,
+  };
+  if (editId) {
+    const i = S.txns.findIndex(x=>x.id===editId);
+    if (i!==-1) S.txns[i] = t;
+  } else { S.txns.push(t); }
+  save(); closeModal(); refresh();
+}
+
+function delTx(id) {
+  if (!confirm('确认删除这条记录？')) return;
+  S.txns = S.txns.filter(x=>x.id!==id);
+  save(); refresh();
+}
+
+// ═══════════════════════════════════════════════
+// TAB 2 · 本月分析
+// ═══════════════════════════════════════════════
+function monthlyHTML() {
+  const {year, month, member} = S.mv;
+  const members = ['全部',...S.cats.members];
+  const txns = filterTx({year,month,member});
+  const inc  = sumF(txns.filter(t=>t.type==='收入'),'inc');
+  const exp  = sumF(txns.filter(t=>t.type==='支出'),'exp');
+
+  // calendar
+  const firstDow = (new Date(year,month-1,1).getDay()+6)%7; // Mon=0
+  const daysInMonth = new Date(year,month,0).getDate();
+  const todayStr = today();
+  let calHtml = ['日','一','二','三','四','五','六'].map(d=>`<div class="cal-hdr">${d}</div>`).join('');
+
+  // offset for Monday start (shift headers to Mon-first)
+  const hdrs = ['一','二','三','四','五','六','日'].map(d=>`<div class="cal-hdr">${d}</div>`).join('');
+  let cells = '';
+  for (let i=0; i<firstDow; i++) cells += '<div class="cal-day other"></div>';
+  for (let d=1; d<=daysInMonth; d++) {
+    const ds = `${year}-${p2(month)}-${p2(d)}`;
+    const dt = txns.filter(t=>t.date===ds);
+    const di = sumF(dt.filter(t=>t.type==='收入'),'inc');
+    const de = sumF(dt.filter(t=>t.type==='支出'),'exp');
+    cells += `<div class="cal-day ${ds===todayStr?'today':''}">
+      <div class="cal-dn">${d}</div>
+      ${di>0?`<div class="cal-inc">+${fmtShort(di)}</div>`:''}
+      ${de>0?`<div class="cal-exp">-${fmtShort(de)}</div>`:''}
+    </div>`;
+  }
+  const tail = (firstDow+daysInMonth)%7;
+  if (tail>0) for(let i=tail;i<7;i++) cells += '<div class="cal-day other"></div>';
+
+  // category breakdown
+  const expBreak = S.cats.expense.map((c,i)=>({c,v:sumF(txns.filter(t=>t.type==='支出'&&t.cat===c),'exp'),col:COLORS[i%12]})).filter(x=>x.v>0);
+  const incBreak = S.cats.income.map((c,i)=>({c,v:sumF(txns.filter(t=>t.type==='收入'&&t.cat===c),'inc'),col:COLORS[i%12]})).filter(x=>x.v>0);
+
+  function breakTable(rows, total, isExp) {
+    if (!rows.length) return `<p style="color:var(--gray);text-align:center;padding:12px">本月无${isExp?'支出':'收入'}</p>`;
+    return `<table class="t"><thead><tr><th>分类</th><th class="tr">金额</th><th class="tr">占比</th></tr></thead><tbody>
+      ${rows.map(r=>`<tr>
+        <td><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${r.col};margin-right:5px"></span>${r.c}</td>
+        <td class="tr ${isExp?'c-red':'c-green'}">¥${fmt(r.v)}</td>
+        <td class="tr">${total>0?Math.round(r.v/total*100):0}%</td>
+      </tr>`).join('')}
+      </tbody><tfoot><tr><td>合计</td><td class="tr">¥${fmt(total)}</td><td class="tr">100%</td></tr></tfoot>
+    </table>`;
+  }
+
+  return `
+  <div class="card">
+    <div class="row" style="margin-bottom:12px">
+      <div class="fg"><label>年份</label><select id="my" onchange="updMv()" style="width:80px">
+        ${[2023,2024,2025,2026,2027].map(y=>`<option ${y===year?'selected':''}>${y}</option>`).join('')}
+      </select></div>
+      <div class="fg"><label>月份</label><select id="mm" onchange="updMv()" style="width:70px">
+        ${Array.from({length:12},(_,i)=>`<option value="${i+1}" ${i+1===month?'selected':''}>${i+1}月</option>`).join('')}
+      </select></div>
+      <div class="fg"><label>成员</label><select id="mmb" onchange="updMv()" style="width:80px">
+        ${members.map(m=>`<option ${m===member?'selected':''}>${m}</option>`).join('')}
+      </select></div>
+    </div>
+    <div class="row">
+      <div class="sbox"><div class="snum c-green">¥${fmt(inc)}</div><div class="slbl">本月收入</div></div>
+      <div class="sbox"><div class="snum c-red">¥${fmt(exp)}</div><div class="slbl">本月支出</div></div>
+      <div class="sbox"><div class="snum c-blue">¥${fmt(inc-exp)}</div><div class="slbl">结余</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">月历 · ${year}年${month}月</div>
+    <div class="cal-grid">${hdrs}${cells}</div>
+  </div>
+  <div class="g2">
+    <div class="card">
+      <div class="card-title">支出分类</div>
+      <div class="row" style="margin-bottom:10px">
+        <svg id="pie-exp" width="120" height="120" viewBox="0 0 120 120"></svg>
+        <div id="leg-exp" class="legend"></div>
+      </div>
+      ${breakTable(expBreak, exp, true)}
+    </div>
+    <div class="card">
+      <div class="card-title">收入分类</div>
+      <div class="row" style="margin-bottom:10px">
+        <svg id="pie-inc" width="120" height="120" viewBox="0 0 120 120"></svg>
+        <div id="leg-inc" class="legend"></div>
+      </div>
+      ${breakTable(incBreak, inc, false)}
+    </div>
+  </div>`;
+}
+
+function afterMonthly() {
+  const {year,month,member} = S.mv;
+  const txns = filterTx({year,month,member});
+  drawPie('pie-exp','leg-exp',S.cats.expense.map((c,i)=>({label:c,value:sumF(txns.filter(t=>t.type==='支出'&&t.cat===c),'exp'),color:COLORS[i%12]})).filter(x=>x.value>0));
+  drawPie('pie-inc','leg-inc',S.cats.income.map((c,i)=>({label:c,value:sumF(txns.filter(t=>t.type==='收入'&&t.cat===c),'inc'),color:COLORS[i%12]})).filter(x=>x.value>0));
+}
+
+function updMv() {
+  S.mv.year   = +document.getElementById('my').value;
+  S.mv.month  = +document.getElementById('mm').value;
+  S.mv.member =  document.getElementById('mmb').value;
+  save();
+  document.getElementById('app-body').innerHTML = monthlyHTML();
+  afterMonthly();
+}
+
+// ═══════════════════════════════════════════════
+// TAB 3 · 年度分析
+// ═══════════════════════════════════════════════
+function annualHTML() {
+  const {year} = S.av;
+  const allYears = [...new Set(S.txns.map(t=>new Date(t.date).getFullYear()))].sort();
+  if (!allYears.includes(year)) allYears.push(year);
+
+  const txns = filterTx({year});
+  const yInc = sumF(txns.filter(t=>t.type==='收入'),'inc');
+  const yExp = sumF(txns.filter(t=>t.type==='支出'),'exp');
+
+  const monthly = Array.from({length:12},(_,i)=>{
+    const m = i+1, mt = filterTx({year,month:m});
+    const mi = sumF(mt.filter(t=>t.type==='收入'),'inc');
+    const me = sumF(mt.filter(t=>t.type==='支出'),'exp');
+    return {m, label:`${m}月`, inc:mi, exp:me, sur:mi-me};
+  });
+
+  const expCats = S.cats.expense.map((c,i)=>({c,v:sumF(txns.filter(t=>t.type==='支出'&&t.cat===c),'exp'),col:COLORS[i%12]})).filter(x=>x.v>0);
+
+  const monthRows = monthly.map(m=>`<tr>
+    <td>${year}年${m.m}月</td>
+    <td class="tr c-green">¥${fmt(m.inc)}</td>
+    <td class="tr c-red">¥${fmt(m.exp)}</td>
+    <td class="tr ${m.sur>=0?'c-blue':'c-red'}">¥${fmt(m.sur)}</td>
+  </tr>`).join('');
+
+  return `
+  <div class="card">
+    <div class="row-between" style="margin-bottom:12px">
+      <div class="fg"><label>年份</label>
+        <select id="ay" onchange="updAv()" style="width:80px">
+          ${allYears.map(y=>`<option ${y===year?'selected':''}>${y}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div class="sbox"><div class="snum c-green">¥${fmt(yInc)}</div><div class="slbl">年度总收入</div></div>
+      <div class="sbox"><div class="snum c-red">¥${fmt(yExp)}</div><div class="slbl">年度总支出</div></div>
+      <div class="sbox"><div class="snum c-blue">¥${fmt(yInc-yExp)}</div><div class="slbl">年度净结余</div></div>
+      <div class="sbox"><div class="snum">${yInc>0?Math.round(yExp/yInc*100):0}%</div><div class="slbl">支出率</div></div>
+    </div>
+  </div>
+  <div class="g2">
+    <div class="card">
+      <div class="card-title">年度收支饼图</div>
+      <div class="row">
+        <svg id="pie-ann" width="140" height="140" viewBox="0 0 140 140"></svg>
+        <div id="leg-ann" class="legend"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">支出分类占比</div>
+      <div class="row">
+        <svg id="pie-expcat" width="140" height="140" viewBox="0 0 140 140"></svg>
+        <div id="leg-expcat" class="legend" style="max-height:140px;overflow-y:auto"></div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">月度收支结余柱状图</div>
+    <svg id="bar-monthly" style="width:100%;display:block;height:240px"></svg>
+    <div class="row" style="margin-top:6px;font-size:12px;gap:14px">
+      <span><span style="display:inline-block;width:12px;height:12px;background:#27ae60;border-radius:2px"></span> 收入</span>
+      <span><span style="display:inline-block;width:12px;height:12px;background:#e74c3c;border-radius:2px"></span> 支出</span>
+      <span><span style="display:inline-block;width:12px;height:12px;background:#2980b9;border-radius:2px"></span> 结余</span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">月度明细</div>
+    <div class="tbl-wrap"><table class="t">
+      <thead><tr><th>月份</th><th class="tr">收入</th><th class="tr">支出</th><th class="tr">结余</th></tr></thead>
+      <tbody>${monthRows}</tbody>
+      <tfoot><tr><td>全年合计</td><td class="tr c-green">¥${fmt(yInc)}</td><td class="tr c-red">¥${fmt(yExp)}</td><td class="tr c-blue">¥${fmt(yInc-yExp)}</td></tr></tfoot>
+    </table></div>
+  </div>`;
+}
+
+function afterAnnual() {
+  const {year} = S.av;
+  const txns = filterTx({year});
+  const yInc = sumF(txns.filter(t=>t.type==='收入'),'inc');
+  const yExp = sumF(txns.filter(t=>t.type==='支出'),'exp');
+
+  drawPie('pie-ann','leg-ann',[
+    {label:'总收入',value:yInc,color:'#27ae60'},
+    {label:'总支出',value:yExp,color:'#e74c3c'},
+  ].filter(x=>x.value>0));
+
+  drawPie('pie-expcat','leg-expcat',
+    S.cats.expense.map((c,i)=>({label:c,value:sumF(txns.filter(t=>t.type==='支出'&&t.cat===c),'exp'),color:COLORS[i%12]})).filter(x=>x.value>0)
+  );
+
+  const monthly = Array.from({length:12},(_,i)=>{
+    const m=i+1, mt=filterTx({year,month:m});
+    const mi=sumF(mt.filter(t=>t.type==='收入'),'inc');
+    const me=sumF(mt.filter(t=>t.type==='支出'),'exp');
+    return {label:`${m}月`,inc:mi,exp:me,sur:mi-me};
+  });
+  drawBarChart('bar-monthly', monthly);
+}
+
+function updAv() {
+  S.av.year = +document.getElementById('ay').value;
+  save();
+  document.getElementById('app-body').innerHTML = annualHTML();
+  afterAnnual();
+}
+
+// ═══════════════════════════════════════════════
+// TAB 4 · 资产盘点
+// ═══════════════════════════════════════════════
+function assetsHTML() {
+  const a = S.assets;
+
+  function secTotal(items, isLiab) {
+    return items.reduce((s,r)=>{
+      const ch = acctChange(r.name);
+      return s + (isLiab ? r.init - ch : r.init + ch);
+    }, 0);
+  }
+
+  function sectionTable(items, isLiab, sid) {
+    let rows = '', lastSg = '';
+    for (let i=0; i<items.length; i++) {
+      const r = items[i];
+      const ch = acctChange(r.name);
+      const end = isLiab ? r.init - ch : r.init + ch;
+      const sgCell = r.sg !== lastSg
+        ? `<td style="font-weight:600;color:var(--gray);white-space:nowrap">${r.sg}</td>`
+        : '<td></td>';
+      lastSg = r.sg;
+      rows += `<tr>
+        ${sgCell}
+        <td><input style="width:130px" value="${r.name}" onchange="updAssetName('${sid}',${i},this.value)"></td>
+        <td><input type="number" style="width:100px" value="${r.init}" onchange="updAssetInit('${sid}',${i},this.value)"></td>
+        <td class="tr ${ch>0?'c-green':ch<0?'c-red':''}">${ch!==0?'¥'+fmt(ch):'-'}</td>
+        <td class="tr" style="font-weight:600">¥${fmt(end)}</td>
+        <td><input style="width:120px" value="${r.note||''}" onchange="updAssetNote('${sid}',${i},this.value)"></td>
+        <td><button class="btn btn-red btn-sm" onclick="delAssetRow('${sid}',${i})">删</button></td>
+      </tr>`;
+    }
+    return rows;
+  }
+
+  const curT = secTotal(a.current, false);
+  const invT = secTotal(a.invest,  false);
+  const fixT = secTotal(a.fixed,   false);
+  const asT  = curT + invT + fixT;
+  const llT  = secTotal(a.longLiab,  true);
+  const slT  = secTotal(a.shortLiab, true);
+  const liT  = llT + slT;
+  const netW = asT - liT;
+
+  function mkSection(title, items, isLiab, sid, total) {
+    const th2 = isLiab ? '期初负债' : '期初余额';
+    const th3 = isLiab ? '偿还金额' : '变动金额';
+    const th4 = isLiab ? '期末负债' : '期末余额';
+    const colClass = isLiab ? 'c-red' : 'c-green';
+    return `<div class="card">
+      <div class="card-title">${title} <span class="${colClass}" style="font-size:15px;font-weight:700">¥${fmt(total)}</span></div>
+      <div class="tbl-wrap"><table class="t">
+        <thead><tr><th>类别</th><th>名称</th><th>${th2}</th><th class="tr">${th3}</th><th class="tr">${th4}</th><th>备注</th><th></th></tr></thead>
+        <tbody>${sectionTable(items, isLiab, sid)}</tbody>
+      </table></div>
+      <button class="btn btn-gray btn-sm mt8" onclick="addAssetRow('${sid}')">＋ 新增一行</button>
+    </div>`;
+  }
+
+  return `
+  <div class="g2">
+    <div class="card">
+      <div class="row-between" style="margin-bottom:10px">
+        <div class="fg"><label>起始日期</label><input type="date" value="${a.startDate}" onchange="S.assets.startDate=this.value;save()"></div>
+        <div class="fg" style="align-items:flex-end"><span style="font-size:11px;color:var(--gray)">截止：${today()}</span></div>
+      </div>
+      <div class="row">
+        <div class="sbox"><div class="snum c-green">¥${fmt(asT)}</div><div class="slbl">资产合计</div></div>
+        <div class="sbox"><div class="snum c-red">¥${fmt(liT)}</div><div class="slbl">负债合计</div></div>
+        <div class="sbox"><div class="snum c-blue">¥${fmt(netW)}</div><div class="slbl">净资产</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">资产结构</div>
+      <div class="row">
+        <svg id="pie-assets" width="130" height="130" viewBox="0 0 130 130"></svg>
+        <div id="leg-assets" class="legend"></div>
+      </div>
+    </div>
+  </div>
+  ${mkSection('流动资产', a.current,  false, 'current',  curT)}
+  ${mkSection('投资资产', a.invest,   false, 'invest',   invT)}
+  ${mkSection('固定资产', a.fixed,    false, 'fixed',    fixT)}
+  ${mkSection('长期负债', a.longLiab, true,  'longLiab', llT)}
+  ${mkSection('短期负债', a.shortLiab,true,  'shortLiab',slT)}`;
+}
+
+function afterAssets() {
+  const a = S.assets;
+  function st(items, isLiab) {
+    return Math.max(0, items.reduce((s,r)=>{const ch=acctChange(r.name); return s+(isLiab?r.init-ch:r.init+ch);},0));
+  }
+  drawPie('pie-assets','leg-assets',[
+    {label:'流动资产',value:st(a.current,false), color:'#27ae60'},
+    {label:'投资资产',value:st(a.invest,false),  color:'#2980b9'},
+    {label:'固定资产',value:st(a.fixed,false),   color:'#8e44ad'},
+    {label:'负债',     value:st([...a.longLiab,...a.shortLiab],true), color:'#e74c3c'},
+  ].filter(x=>x.value>0));
+}
+
+function updAssetInit(sid, idx, v) { S.assets[sid][idx].init = parseFloat(v)||0; save(); }
+function updAssetNote(sid, idx, v) { S.assets[sid][idx].note = v; save(); }
+function updAssetName(sid, idx, v) { S.assets[sid][idx].name = v; save(); }
+function delAssetRow(sid, idx) { S.assets[sid].splice(idx,1); save(); go('assets'); }
+function addAssetRow(sid) {
+  const isLiab = sid==='longLiab'||sid==='shortLiab';
+  S.assets[sid].push({sg:'新建', name:'新账户', init:0, note:''});
+  save(); go('assets');
+}
+
+// ═══════════════════════════════════════════════
+// TAB 5 · 预算管理
+// ═══════════════════════════════════════════════
+function budgetHTML() {
+  const b = S.budget;
+  const txns = filterTx({start:b.startDate, end:b.endDate, type:'支出'});
+  const days = Math.max(1, Math.round((new Date(b.endDate)-new Date(b.startDate))/86400000)+1);
+  const totBudget = b.items.reduce((s,x)=>s+(parseFloat(x.budget)||0),0);
+  const totActual = sumF(txns,'exp');
+  const rem = totBudget - totActual;
+
+  let rows = '';
+  const cats = S.cats.expense;
+  for (const cat of cats) {
+    const ci = b.items.filter(x=>x.cat===cat);
+    if (!ci.length) continue;
+    const catBudget = ci.reduce((s,x)=>s+(parseFloat(x.budget)||0),0);
+    const catActual = sumF(txns.filter(t=>t.cat===cat),'exp');
+    const pct = catBudget>0 ? Math.min(100,catActual/catBudget*100) : 0;
+
+    rows += `<tr style="background:#f8f9fa;font-weight:600">
+      <td colspan="2" style="padding-left:8px">${cat}</td>
+      <td class="tr">¥${fmt(catBudget)}</td>
+      <td class="tr c-red">¥${fmt(catActual)}</td>
+      <td>
+        <div class="prog-wrap"><div class="prog-fill" style="width:${pct}%;background:${catActual>catBudget?'#e74c3c':'#27ae60'}"></div></div>
+        <span style="font-size:11px;color:var(--gray)">${Math.round(pct)}%</span>
+      </td>
+      <td class="tr ${catActual>catBudget?'c-red':'c-green'}">${catActual>catBudget?'超¥'+fmt(catActual-catBudget):'余¥'+fmt(catBudget-catActual)}</td>
+      <td><button class="btn btn-gray btn-sm" onclick="addBudgetSub('${cat}')">+子项</button></td>
+    </tr>`;
+
+    for (const item of ci) {
+      const subAct = sumF(txns.filter(t=>t.cat===cat&&t.sub===item.sub),'exp');
+      const bp = parseFloat(item.budget)||0;
+      const sp = bp>0 ? Math.min(100,subAct/bp*100) : 0;
+      rows += `<tr>
+        <td style="padding-left:22px;color:var(--gray)">${item.sub||'(无子分类)'}</td>
+        <td></td>
+        <td><input type="number" value="${item.budget}" onchange="updBudget('${cat}','${item.sub}',this.value)" style="width:90px"></td>
+        <td class="tr c-red">¥${fmt(subAct)}</td>
+        <td>
+          <div class="prog-wrap"><div class="prog-fill" style="width:${sp}%;background:${subAct>bp?'#e74c3c':'#2980b9'}"></div></div>
+          <span style="font-size:11px;color:var(--gray)">${bp>0?Math.round(sp)+'%':'-'}</span>
+        </td>
+        <td class="tr ${subAct>bp?'c-red':'c-green'}">${bp>0?(subAct>bp?'超¥'+fmt(subAct-bp):'余¥'+fmt(bp-subAct)):'-'}</td>
+        <td><button class="btn btn-red btn-sm" onclick="delBudget('${cat}','${item.sub}')">删</button></td>
+      </tr>`;
+    }
+  }
+
+  return `
+  <div class="card">
+    <div class="row" style="margin-bottom:12px">
+      <div class="fg"><label>开始日期</label><input type="date" value="${b.startDate}" onchange="updBudgetDate('start',this.value)"></div>
+      <div class="fg"><label>结束日期</label><input type="date" value="${b.endDate}"   onchange="updBudgetDate('end',this.value)"></div>
+      <div class="fg"><label>发薪日</label><input type="number" value="${b.payDay}" min="1" max="31" onchange="S.budget.payDay=this.value;save()" style="width:60px"></div>
+    </div>
+    <div class="row">
+      <div class="sbox"><div class="snum">¥${fmt(totBudget)}</div><div class="slbl">本期预算总额</div></div>
+      <div class="sbox"><div class="snum c-red">¥${fmt(totActual)}</div><div class="slbl">实际支出</div></div>
+      <div class="sbox"><div class="snum ${rem>=0?'c-green':'c-red'}">¥${fmt(Math.abs(rem))}</div><div class="slbl">${rem>=0?'剩余':'超出'}</div></div>
+      <div class="sbox"><div class="snum">${totBudget>0?Math.round(totActual/totBudget*100):0}%</div><div class="slbl">预算使用率</div></div>
+      <div class="sbox"><div class="snum">¥${fmt(totBudget/days)}</div><div class="slbl">日均额度 (${days}天)</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">分类预算</div>
+    <div class="tbl-wrap"><table class="t">
+      <thead><tr><th>子分类</th><th></th><th>预算</th><th class="tr">实际</th><th style="min-width:120px">进度</th><th class="tr">差额</th><th>操作</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr>
+        <td colspan="2">合计</td>
+        <td>¥${fmt(totBudget)}</td>
+        <td class="tr c-red">¥${fmt(totActual)}</td>
+        <td><div class="prog-wrap"><div class="prog-fill" style="width:${totBudget>0?Math.min(100,totActual/totBudget*100):0}%;background:${totActual>totBudget?'#e74c3c':'#27ae60'}"></div></div></td>
+        <td class="tr ${rem>=0?'c-green':'c-red'}">¥${fmt(Math.abs(rem))}</td>
+        <td></td>
+      </tr></tfoot>
+    </table></div>
+  </div>`;
+}
+
+function updBudgetDate(which, v) {
+  S.budget[which==='start'?'startDate':'endDate'] = v; save();
+  document.getElementById('app-body').innerHTML = budgetHTML();
+}
+function updBudget(cat, sub, v) {
+  const it = S.budget.items.find(x=>x.cat===cat&&x.sub===sub);
+  if (it) { it.budget = parseFloat(v)||0; save(); }
+}
+function addBudgetSub(cat) {
+  const sub = prompt(`在「${cat}」中新增子分类：`,'');
+  if (!sub) return;
+  S.budget.items.push({cat, sub, budget:0}); save();
+  document.getElementById('app-body').innerHTML = budgetHTML();
+}
+function delBudget(cat, sub) {
+  S.budget.items = S.budget.items.filter(x=>!(x.cat===cat&&x.sub===sub)); save();
+  document.getElementById('app-body').innerHTML = budgetHTML();
+}
+
+// ═══════════════════════════════════════════════
+// TAB 6 · 自定义分类
+// ═══════════════════════════════════════════════
+function catsHTML() {
+  const c = S.cats;
+  function pills(key, arr) {
+    return arr.map((v,i)=>`<span class="pill">${v}<button class="pill-del" onclick="rmCat('${key}',${i})">×</button></span>`).join('');
+  }
+  function addRow(key, ph) {
+    return `<div class="row mt8"><input type="text" id="add-${key}" placeholder="${ph}" style="flex:1"><button class="btn btn-green btn-sm" onclick="addCat('${key}')">添加</button></div>`;
+  }
+  function subSection(cat, key) {
+    const subs = c.sub[cat]||[];
+    return `<div style="margin-bottom:10px">
+      <strong style="font-size:13px">${cat}：</strong>
+      ${subs.map((s,i)=>`<span class="pill" style="background:#e8f5e9">${s}<button class="pill-del" onclick="rmSub('${cat}',${i})">×</button></span>`).join('')}
+      <span style="display:inline-flex;gap:4px;align-items:center;margin:2px">
+        <input type="text" id="addsub-${cat}" placeholder="新子类" style="width:90px;font-size:12px">
+        <button class="btn btn-green btn-sm" onclick="addSub('${cat}')">+</button>
+      </span>
+    </div>`;
+  }
+
+  return `
+  <div class="g2">
+    <div class="card">
+      <div class="card-title">收入主分类</div>
+      <div>${pills('income',c.income)}</div>
+      ${addRow('income','新增收入分类')}
+    </div>
+    <div class="card">
+      <div class="card-title">支出主分类</div>
+      <div>${pills('expense',c.expense)}</div>
+      ${addRow('expense','新增支出分类')}
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">子分类配置</div>
+    <div class="itabs">
+      <button class="itab active" onclick="showItab('income',this)">收入子分类</button>
+      <button class="itab" onclick="showItab('expense',this)">支出子分类</button>
+      <button class="itab" onclick="showItab('transfer',this)">转账子分类</button>
+    </div>
+    <div id="itab-income">${c.income.map(cat=>subSection(cat,'income')).join('')}</div>
+    <div id="itab-expense" style="display:none">${c.expense.map(cat=>subSection(cat,'expense')).join('')}</div>
+    <div id="itab-transfer" style="display:none">${c.transfer.map(cat=>subSection(cat,'transfer')).join('')}</div>
+  </div>
+  <div class="g2">
+    <div class="card">
+      <div class="card-title">支付账户</div>
+      <div>${pills('accounts',c.accounts)}</div>
+      ${addRow('accounts','新增账户')}
+    </div>
+    <div class="card">
+      <div class="card-title">成员</div>
+      <div>${pills('members',c.members)}</div>
+      ${addRow('members','新增成员')}
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">记账标签</div>
+    <div>${pills('tags',c.tags)}</div>
+    ${addRow('tags','新增标签')}
+  </div>`;
+}
+
+function showItab(which, btn) {
+  ['income','expense','transfer'].forEach(k=>{
+    const el = document.getElementById('itab-'+k);
+    if (el) el.style.display = k===which?'block':'none';
+  });
+  document.querySelectorAll('.itab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+function addCat(key) {
+  const v = document.getElementById('add-'+key).value.trim();
+  if (!v) return;
+  S.cats[key].push(v); save();
+  document.getElementById('app-body').innerHTML = catsHTML();
+}
+function rmCat(key, i) {
+  S.cats[key].splice(i,1); save();
+  document.getElementById('app-body').innerHTML = catsHTML();
+}
+function addSub(cat) {
+  const id = 'addsub-'+cat;
+  const v = document.getElementById(id)?.value.trim();
+  if (!v) return;
+  if (!S.cats.sub[cat]) S.cats.sub[cat]=[];
+  S.cats.sub[cat].push(v); save();
+  document.getElementById('app-body').innerHTML = catsHTML();
+}
+function rmSub(cat, i) {
+  S.cats.sub[cat].splice(i,1); save();
+  document.getElementById('app-body').innerHTML = catsHTML();
+}
+
+// ═══════════════════════════════════════════════
+// SVG CHARTS
+// ═══════════════════════════════════════════════
+function drawPie(svgId, legId, data) {
+  const svg = document.getElementById(svgId);
+  const leg = legId ? document.getElementById(legId) : null;
+  if (!svg) return;
+  const vb = svg.getAttribute('viewBox')||'0 0 120 120';
+  const [,,W,H] = vb.split(' ').map(Number);
+  const cx=W/2, cy=H/2, r=Math.min(W,H)*0.42, inner=r*0.45;
+
+  const total = data.reduce((s,d)=>s+d.value,0);
+  if (!total) {
+    svg.innerHTML = `<text x="${cx}" y="${cy+4}" text-anchor="middle" fill="#aaa" font-size="11">暂无数据</text>`;
+    if (leg) leg.innerHTML=''; return;
+  }
+
+  let a = -Math.PI/2, paths='';
+  for (const d of data) {
+    const da = d.value/total*Math.PI*2;
+    const ea = a+da;
+    const cos1=Math.cos(a), sin1=Math.sin(a), cos2=Math.cos(ea), sin2=Math.sin(ea);
+    const lg = da>Math.PI?1:0;
+    paths += `<path d="M${cx+inner*cos1},${cy+inner*sin1} L${cx+r*cos1},${cy+r*sin1} A${r},${r},0,${lg},1,${cx+r*cos2},${cy+r*sin2} L${cx+inner*cos2},${cy+inner*sin2} A${inner},${inner},0,${lg},0,${cx+inner*cos1},${cy+inner*sin1}" fill="${d.color}" stroke="#fff" stroke-width="1.5"/>`;
+    a = ea;
+  }
+  svg.innerHTML = paths;
+
+  if (leg) leg.innerHTML = data.map(d=>`
+    <div class="leg-item">
+      <span class="leg-dot" style="background:${d.color}"></span>
+      <span>${d.label}</span>
+      <span style="color:var(--gray);margin-left:4px">${Math.round(d.value/total*100)}%</span>
+    </div>`).join('');
+}
+
+function drawBarChart(svgId, data) {
+  const svgEl = document.getElementById(svgId);
+  if (!svgEl) return;
+  const W = svgEl.getBoundingClientRect().width || 680;
+  const H = 240;
+  const pad = {t:20,r:16,b:28,l:55};
+  const cW = W-pad.l-pad.r, cH = H-pad.t-pad.b;
+
+  const allVals = data.flatMap(d=>[d.inc,d.exp,Math.abs(d.sur)]);
+  const maxV = Math.max(...allVals, 1);
+  const minSur = Math.min(...data.map(d=>d.sur), 0);
+  const maxY = maxV*1.12;
+  const minY = minSur<0 ? minSur*1.12 : 0;
+  const rangeY = maxY-minY;
+
+  const gW = cW/data.length;
+  const bW = gW/4.5;
+  const yp = v => pad.t + cH*(1-(v-minY)/rangeY);
+  const z = yp(0);
+
+  // gridlines + y-axis
+  const steps=5;
+  let grid='', bars='', xlbls='';
+  for (let i=0;i<=steps;i++) {
+    const v = minY+(rangeY/steps)*i;
+    const y = yp(v);
+    grid += `<line x1="${pad.l}" y1="${y}" x2="${W-pad.r}" y2="${y}" stroke="#ececec" stroke-width="1"/>`;
+    grid += `<text x="${pad.l-5}" y="${y+4}" text-anchor="end" font-size="10" fill="#aaa">${fmtShort(v)}</text>`;
+  }
+  if (minY<0) grid += `<line x1="${pad.l}" y1="${z}" x2="${W-pad.r}" y2="${z}" stroke="#ccc" stroke-width="1" stroke-dasharray="3,2"/>`;
+
+  for (let i=0;i<data.length;i++) {
+    const d = data[i];
+    const x0 = pad.l + i*gW + gW/2 - bW*1.5;
+    // income
+    const iy = yp(d.inc), ih = z-iy;
+    if (ih>0) bars += `<rect x="${x0}" y="${iy}" width="${bW}" height="${ih}" fill="#27ae60" opacity=".85" rx="1"/>`;
+    // expense
+    const ey = yp(d.exp), eh = z-ey;
+    if (eh>0) bars += `<rect x="${x0+bW+2}" y="${ey}" width="${bW}" height="${eh}" fill="#e74c3c" opacity=".85" rx="1"/>`;
+    // surplus
+    const sy = d.sur>=0 ? yp(d.sur) : z;
+    const sh = Math.abs(yp(Math.abs(d.sur))-z);
+    if (sh>0) bars += `<rect x="${x0+bW*2+4}" y="${sy}" width="${bW}" height="${sh}" fill="${d.sur>=0?'#2980b9':'#f39c12'}" opacity=".85" rx="1"/>`;
+    xlbls += `<text x="${x0+bW*1.5}" y="${H-6}" text-anchor="middle" font-size="10" fill="#888">${d.label}</text>`;
+  }
+
+  svgEl.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svgEl.innerHTML = grid+bars+xlbls;
+}
+
+// ═══════════════════════════════════════════════
+// EXPORT / IMPORT
+// ═══════════════════════════════════════════════
+function exportJSON() {
+  const b = new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(b);
+  a.download = `xiaoshu-${today()}.json`;
+  a.click();
+}
+function importJSON(e) {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = ev => {
+    try {
+      const d = JSON.parse(ev.target.result);
+      S = deepMerge(mkState(), d); save(); refresh();
+      alert('✅ 导入成功');
+    } catch { alert('❌ 导入失败：文件格式不正确'); }
+  };
+  r.readAsText(f);
+  e.target.value='';
+}
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+function refresh() {
+  renderNav(); renderSummary(); renderBody();
+}
+
+load();
+refresh();
+</script>
+</body>
+</html>

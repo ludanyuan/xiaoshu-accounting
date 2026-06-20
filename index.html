@@ -216,39 +216,39 @@ function mkDefaultAssets() {
   return {
     startDate: today(),
     current: [
-      {sg:'现金',   name:'现金',          init:0, note:''},
-      {sg:'微信',   name:'零钱',           init:0, note:'生活支出'},
-      {sg:'微信',   name:'零钱通',          init:0, note:''},
-      {sg:'支付宝', name:'余额宝',          init:0, note:'购物'},
-      {sg:'支付宝', name:'支付宝余额',       init:0, note:''},
-      {sg:'银行',   name:'招商银行(8579)',  init:0, note:'存款'},
-      {sg:'应收',   name:'他人借款',         init:0, note:''},
-      {sg:'应收',   name:'待报销款项',        init:0, note:''},
-      {sg:'其他',   name:'未发年终奖',        init:0, note:''},
+      {sg:'现金',   name:'现金',          currency:'CNY', init:0, note:''},
+      {sg:'微信',   name:'零钱',           currency:'CNY', init:0, note:'生活支出'},
+      {sg:'微信',   name:'零钱通',          currency:'CNY', init:0, note:''},
+      {sg:'支付宝', name:'余额宝',          currency:'CNY', init:0, note:'购物'},
+      {sg:'支付宝', name:'支付宝余额',       currency:'CNY', init:0, note:''},
+      {sg:'银行',   name:'招商银行(8579)',  currency:'CNY', init:0, note:'存款'},
+      {sg:'应收',   name:'他人借款',         currency:'CNY', init:0, note:''},
+      {sg:'应收',   name:'待报销款项',        currency:'CNY', init:0, note:''},
+      {sg:'其他',   name:'未发年终奖',        currency:'CNY', init:0, note:''},
     ],
     invest: [
-      {sg:'证券', name:'基金1', init:0, note:''},
-      {sg:'证券', name:'基金2', init:0, note:''},
-      {sg:'保险', name:'保险1', init:0, note:''},
-      {sg:'保险', name:'保险2', init:0, note:''},
+      {sg:'证券', name:'基金1', currency:'CNY', init:0, note:''},
+      {sg:'证券', name:'基金2', currency:'CNY', init:0, note:''},
+      {sg:'保险', name:'保险1', currency:'CNY', init:0, note:''},
+      {sg:'保险', name:'保险2', currency:'CNY', init:0, note:''},
     ],
     fixed: [
-      {sg:'固定资产', name:'自有汽车', init:0, note:''},
-      {sg:'固定资产', name:'自用住房', init:0, note:'住房首付'},
+      {sg:'固定资产', name:'自有汽车', currency:'CNY', init:0, note:''},
+      {sg:'固定资产', name:'自用住房', currency:'CNY', init:0, note:'住房首付'},
     ],
     longLiab: [
-      {sg:'长期负债', name:'住房贷款账户', init:0, note:''},
-      {sg:'长期负债', name:'汽车贷款账户', init:0, note:''},
+      {sg:'长期负债', name:'住房贷款账户', currency:'CNY', init:0, note:''},
+      {sg:'长期负债', name:'汽车贷款账户', currency:'CNY', init:0, note:''},
     ],
     shortLiab: [
-      {sg:'银行卡', name:'招商银行(8560)', init:0,      note:''},
-      {sg:'银行卡', name:'农业银行(0343)', init:0,      note:''},
-      {sg:'支付宝', name:'建行信用卡A',   init:507.42, note:''},
-      {sg:'支付宝', name:'交行信用卡B',   init:0,      note:''},
-      {sg:'京东',   name:'花呗',          init:0,      note:''},
-      {sg:'京东',   name:'借呗',          init:0,      note:''},
-      {sg:'借款',   name:'白条',          init:0,      note:''},
-      {sg:'借款',   name:'金条',          init:0,      note:''},
+      {sg:'银行卡', name:'招商银行(8560)', currency:'CNY', init:0,      note:''},
+      {sg:'银行卡', name:'农业银行(0343)', currency:'CNY', init:0,      note:''},
+      {sg:'支付宝', name:'建行信用卡A',   currency:'CNY', init:507.42, note:''},
+      {sg:'支付宝', name:'交行信用卡B',   currency:'CNY', init:0,      note:''},
+      {sg:'京东',   name:'花呗',          currency:'CNY', init:0,      note:''},
+      {sg:'京东',   name:'借呗',          currency:'CNY', init:0,      note:''},
+      {sg:'借款',   name:'白条',          currency:'CNY', init:0,      note:''},
+      {sg:'借款',   name:'金条',          currency:'CNY', init:0,      note:''},
     ],
   };
 }
@@ -857,36 +857,67 @@ function updAv() {
 // ═══════════════════════════════════════════════
 function assetsHTML() {
   const a = S.assets;
-  function secTotal(items,isLiab){return items.reduce((s,r)=>{const ch=acctChange(r.name);return s+(isLiab?r.init-ch:r.init+ch);},0);}
-  function sectionTable(items,isLiab,sid){
-    let rows='',lastSg='';
-    for(let i=0;i<items.length;i++){
-      const r=items[i],ch=acctChange(r.name),end=isLiab?r.init-ch:r.init+ch;
-      const sgCell=r.sg!==lastSg?`<td style="font-weight:600;color:var(--gray);white-space:nowrap">${r.sg}</td>`:'<td></td>';
-      lastSg=r.sg;
-      rows+=`<tr>${sgCell}
-        <td><input style="width:130px" value="${r.name}" onchange="updAssetName('${sid}',${i},this.value)"></td>
-        <td><input type="number" style="width:100px" value="${r.init}" onchange="updAssetInit('${sid}',${i},this.value)"></td>
-        <td class="tr ${ch>0?'c-green':ch<0?'c-red':''}">${ch!==0?'¥'+fmt(ch):'-'}</td>
-        <td class="tr" style="font-weight:600">¥${fmt(end)}</td>
-        <td><input style="width:120px" value="${r.note||''}" onchange="updAssetNote('${sid}',${i},this.value)"></td>
+
+  // returns {cny, usd} totals for a section
+  function secTotals(items, isLiab) {
+    let cny=0, usd=0;
+    for (const r of items) {
+      const ch = acctChange(r.name);
+      const end = isLiab ? r.init - ch : r.init + ch;
+      if ((r.currency||'CNY') === 'USD') usd += end;
+      else cny += end;
+    }
+    return {cny, usd};
+  }
+
+  function sectionTable(items, isLiab, sid) {
+    let rows='', lastSg='';
+    for (let i=0; i<items.length; i++) {
+      const r=items[i], ch=acctChange(r.name), end=isLiab?r.init-ch:r.init+ch;
+      const sym = symFor(r.currency||'CNY');
+      const sgCell = r.sg!==lastSg ? `<td style="font-weight:600;color:var(--gray);white-space:nowrap">${r.sg}</td>` : '<td></td>';
+      lastSg = r.sg;
+      rows += `<tr>${sgCell}
+        <td><input style="width:120px" value="${r.name}" onchange="updAssetName('${sid}',${i},this.value)"></td>
+        <td>
+          <select style="width:72px;font-size:12px;padding:3px 4px" onchange="updAssetCurrency('${sid}',${i},this.value)">
+            <option value="CNY" ${(r.currency||'CNY')==='CNY'?'selected':''}>¥ CNY</option>
+            <option value="USD" ${(r.currency||'CNY')==='USD'?'selected':''}>$ USD</option>
+          </select>
+        </td>
+        <td><input type="number" style="width:90px" value="${r.init}" onchange="updAssetInit('${sid}',${i},this.value)"></td>
+        <td class="tr ${ch>0?'c-green':ch<0?'c-red':''}">${ch!==0?sym+fmt(Math.abs(ch))+(ch<0?' ↓':' ↑'):'-'}</td>
+        <td class="tr" style="font-weight:600">${sym}${fmt(end)}</td>
+        <td><input style="width:110px" value="${r.note||''}" onchange="updAssetNote('${sid}',${i},this.value)"></td>
         <td><button class="btn btn-red btn-sm" onclick="delAssetRow('${sid}',${i})">删</button></td>
       </tr>`;
     }
     return rows;
   }
-  const curT=secTotal(a.current,false),invT=secTotal(a.invest,false),fixT=secTotal(a.fixed,false),asT=curT+invT+fixT;
-  const llT=secTotal(a.longLiab,true),slT=secTotal(a.shortLiab,true),liT=llT+slT,netW=asT-liT;
-  function mkSection(title,items,isLiab,sid,total){
-    const[th2,th3,th4]=isLiab?['期初负债','偿还金额','期末负债']:['期初余额','变动金额','期末余额'];
+
+  // aggregate all sections
+  const allSections = [a.current, a.invest, a.fixed];
+  const allLiab     = [a.longLiab, a.shortLiab];
+  let asC=0, asU=0, liC=0, liU=0;
+  for (const sec of allSections) { const t=secTotals(sec,false); asC+=t.cny; asU+=t.usd; }
+  for (const sec of allLiab)     { const t=secTotals(sec,true);  liC+=t.cny; liU+=t.usd; }
+  const hasUsdAssets = asU!==0 || liU!==0;
+
+  function mkSection(title, items, isLiab, sid) {
+    const {cny,usd} = secTotals(items, isLiab);
+    const hasU = Math.abs(usd) > 0;
+    const titleExtra = `<span class="${isLiab?'c-red':'c-green'}" style="font-size:14px;font-weight:700">¥${fmt(cny)}${hasU?` &nbsp;$${fmt(usd)}`:''}</span>`;
+    const [th2,th3,th4] = isLiab ? ['期初负债','变动','期末负债'] : ['期初余额','变动','期末余额'];
     return `<div class="card">
-      <div class="card-title">${title} <span class="${isLiab?'c-red':'c-green'}" style="font-size:15px;font-weight:700">¥${fmt(total)}</span></div>
+      <div class="card-title">${title} ${titleExtra}</div>
       <div class="tbl-wrap"><table class="t">
-        <thead><tr><th>类别</th><th>名称</th><th>${th2}</th><th class="tr">${th3}</th><th class="tr">${th4}</th><th>备注</th><th></th></tr></thead>
+        <thead><tr><th>类别</th><th>名称</th><th>币种</th><th>${th2}</th><th class="tr">${th3}</th><th class="tr">${th4}</th><th>备注</th><th></th></tr></thead>
         <tbody>${sectionTable(items,isLiab,sid)}</tbody>
       </table></div>
       <button class="btn btn-gray btn-sm mt8" onclick="addAssetRow('${sid}')">＋ 新增一行</button>
-    </div>`;}
+    </div>`;
+  }
+
   return `
   <div class="g2">
     <div class="card">
@@ -895,9 +926,15 @@ function assetsHTML() {
         <span style="font-size:11px;color:var(--gray)">截止：${today()}</span>
       </div>
       <div class="row">
-        <div class="sbox"><div class="snum c-green">¥${fmt(asT)}</div><div class="slbl">资产合计</div></div>
-        <div class="sbox"><div class="snum c-red">¥${fmt(liT)}</div><div class="slbl">负债合计</div></div>
-        <div class="sbox"><div class="snum c-blue">¥${fmt(netW)}</div><div class="slbl">净资产</div></div>
+        <div class="sbox"><div class="snum c-green">¥${fmt(asC)}</div><div class="slbl">¥ 资产</div></div>
+        <div class="sbox"><div class="snum c-red">¥${fmt(liC)}</div><div class="slbl">¥ 负债</div></div>
+        <div class="sbox"><div class="snum c-blue">¥${fmt(asC-liC)}</div><div class="slbl">¥ 净资产</div></div>
+        ${hasUsdAssets ? `
+        <div class="divider-usd"></div>
+        <div class="sbox"><div class="snum c-green">$${fmt(asU)}</div><div class="slbl">$ 资产</div></div>
+        <div class="sbox"><div class="snum c-red">$${fmt(liU)}</div><div class="slbl">$ 负债</div></div>
+        <div class="sbox"><div class="snum c-blue">$${fmt(asU-liU)}</div><div class="slbl">$ 净资产</div></div>
+        ` : ''}
       </div>
     </div>
     <div class="card">
@@ -905,29 +942,32 @@ function assetsHTML() {
       <div class="row"><svg id="pie-assets" width="130" height="130" viewBox="0 0 130 130"></svg><div id="leg-assets" class="legend"></div></div>
     </div>
   </div>
-  ${mkSection('流动资产',a.current,false,'current',curT)}
-  ${mkSection('投资资产',a.invest,false,'invest',invT)}
-  ${mkSection('固定资产',a.fixed,false,'fixed',fixT)}
-  ${mkSection('长期负债',a.longLiab,true,'longLiab',llT)}
-  ${mkSection('短期负债',a.shortLiab,true,'shortLiab',slT)}`;
+  ${mkSection('流动资产',a.current,false,'current')}
+  ${mkSection('投资资产',a.invest,false,'invest')}
+  ${mkSection('固定资产',a.fixed,false,'fixed')}
+  ${mkSection('长期负债',a.longLiab,true,'longLiab')}
+  ${mkSection('短期负债',a.shortLiab,true,'shortLiab')}`;
 }
 
 function afterAssets(){
   const a=S.assets;
-  function st(items,il){return Math.max(0,items.reduce((s,r)=>{const ch=acctChange(r.name);return s+(il?r.init-ch:r.init+ch);},0));}
+  function endVal(items,il){
+    return Math.max(0,items.reduce((s,r)=>{const ch=acctChange(r.name);return s+(il?r.init-ch:r.init+ch);},0));
+  }
   drawPie('pie-assets','leg-assets',[
-    {label:'流动资产',value:st(a.current,false),color:'#27ae60'},
-    {label:'投资资产',value:st(a.invest,false),color:'#2980b9'},
-    {label:'固定资产',value:st(a.fixed,false),color:'#8e44ad'},
-    {label:'负债',value:st([...a.longLiab,...a.shortLiab],true),color:'#e74c3c'},
+    {label:'流动资产',value:endVal(a.current,false),color:'#27ae60'},
+    {label:'投资资产',value:endVal(a.invest,false),color:'#2980b9'},
+    {label:'固定资产',value:endVal(a.fixed,false),color:'#8e44ad'},
+    {label:'负债',value:endVal([...a.longLiab,...a.shortLiab],true),color:'#e74c3c'},
   ].filter(x=>x.value>0));
 }
 
 function updAssetInit(sid,idx,v){S.assets[sid][idx].init=parseFloat(v)||0;save();}
 function updAssetNote(sid,idx,v){S.assets[sid][idx].note=v;save();}
 function updAssetName(sid,idx,v){S.assets[sid][idx].name=v;save();}
+function updAssetCurrency(sid,idx,v){S.assets[sid][idx].currency=v;save();go('assets');}
 function delAssetRow(sid,idx){S.assets[sid].splice(idx,1);save();go('assets');}
-function addAssetRow(sid){S.assets[sid].push({sg:'新建',name:'新账户',init:0,note:''});save();go('assets');}
+function addAssetRow(sid){S.assets[sid].push({sg:'新建',name:'新账户',currency:'CNY',init:0,note:''});save();go('assets');}
 
 // ═══════════════════════════════════════════════
 // TAB 5 · 预算管理

@@ -261,22 +261,22 @@ function mkDefaultBudget() {
     endDate:   `${y}-${p2(m)}-${last}`,
     payDay: 30,
     items: [
-      {cat:'生活基础',sub:'三餐基础',   budget:500},
-      {cat:'生活基础',sub:'外出吃饭',   budget:100},
-      {cat:'生活基础',sub:'住房水电',   budget:100},
-      {cat:'生活基础',sub:'交通出行',   budget:100},
-      {cat:'生活基础',sub:'服装鞋袜',   budget:100},
-      {cat:'生活基础',sub:'日用品',     budget:50},
-      {cat:'生活基础',sub:'话费',       budget:100},
-      {cat:'品质消费',sub:'快乐解馋',   budget:200},
-      {cat:'品质消费',sub:'休闲娱乐',   budget:100},
-      {cat:'品质消费',sub:'旅游',       budget:100},
-      {cat:'品质消费',sub:'幸福感购物', budget:100},
-      {cat:'品质消费',sub:'水果',       budget:100},
-      {cat:'品质消费',sub:'会员',       budget:100},
-      {cat:'自我投资',sub:'上课',       budget:1000},
-      {cat:'人情往来',sub:'请客',       budget:300},
-      {cat:'其他支出',sub:'意外支出',   budget:100},
+      {cat:'生活基础',sub:'三餐基础',   currency:'CNY', budget:500},
+      {cat:'生活基础',sub:'外出吃饭',   currency:'CNY', budget:100},
+      {cat:'生活基础',sub:'住房水电',   currency:'CNY', budget:100},
+      {cat:'生活基础',sub:'交通出行',   currency:'CNY', budget:100},
+      {cat:'生活基础',sub:'服装鞋袜',   currency:'CNY', budget:100},
+      {cat:'生活基础',sub:'日用品',     currency:'CNY', budget:50},
+      {cat:'生活基础',sub:'话费',       currency:'CNY', budget:100},
+      {cat:'品质消费',sub:'快乐解馋',   currency:'CNY', budget:200},
+      {cat:'品质消费',sub:'休闲娱乐',   currency:'CNY', budget:100},
+      {cat:'品质消费',sub:'旅游',       currency:'CNY', budget:100},
+      {cat:'品质消费',sub:'幸福感购物', currency:'CNY', budget:100},
+      {cat:'品质消费',sub:'水果',       currency:'CNY', budget:100},
+      {cat:'品质消费',sub:'会员',       currency:'CNY', budget:100},
+      {cat:'自我投资',sub:'上课',       currency:'CNY', budget:1000},
+      {cat:'人情往来',sub:'请客',       currency:'CNY', budget:300},
+      {cat:'其他支出',sub:'意外支出',   currency:'CNY', budget:100},
     ],
   };
 }
@@ -973,72 +973,134 @@ function addAssetRow(sid){S.assets[sid].push({sg:'新建',name:'新账户',curre
 // TAB 5 · 预算管理
 // ═══════════════════════════════════════════════
 function budgetHTML(){
-  const b=S.budget;
-  const txns=filterTx({start:b.startDate,end:b.endDate,type:'支出',currency:'CNY'});
-  const days=Math.max(1,Math.round((new Date(b.endDate)-new Date(b.startDate))/86400000)+1);
-  const totBudget=b.items.reduce((s,x)=>s+(parseFloat(x.budget)||0),0);
-  const totActual=sumF(txns,'exp'),rem=totBudget-totActual;
-  let rows='';
-  for(const cat of S.cats.expense){
-    const ci=b.items.filter(x=>x.cat===cat);if(!ci.length)continue;
-    const catB=ci.reduce((s,x)=>s+(parseFloat(x.budget)||0),0);
-    const catA=sumF(txns.filter(t=>t.cat===cat),'exp');
-    const pct=catB>0?Math.min(100,catA/catB*100):0;
-    rows+=`<tr style="background:#f8f9fa;font-weight:600">
-      <td colspan="2" style="padding-left:8px">${cat}</td>
-      <td class="tr">¥${fmt(catB)}</td><td class="tr c-red">¥${fmt(catA)}</td>
-      <td><div class="prog-wrap"><div class="prog-fill" style="width:${pct}%;background:${catA>catB?'#e74c3c':'#27ae60'}"></div></div>
-      <span style="font-size:11px;color:var(--gray)">${Math.round(pct)}%</span></td>
-      <td class="tr ${catA>catB?'c-red':'c-green'}">${catA>catB?'超¥'+fmt(catA-catB):'余¥'+fmt(catB-catA)}</td>
-      <td><button class="btn btn-gray btn-sm" onclick="addBudgetSub('${cat}')">+子项</button></td>
-    </tr>`;
-    for(const item of ci){
-      const subA=sumF(txns.filter(t=>t.cat===cat&&t.sub===item.sub),'exp');
-      const bp=parseFloat(item.budget)||0,sp=bp>0?Math.min(100,subA/bp*100):0;
-      rows+=`<tr>
-        <td style="padding-left:22px;color:var(--gray)">${item.sub||'(无子分类)'}</td><td></td>
-        <td><input type="number" value="${item.budget}" onchange="updBudget('${cat}','${item.sub}',this.value)" style="width:90px"></td>
-        <td class="tr c-red">¥${fmt(subA)}</td>
-        <td><div class="prog-wrap"><div class="prog-fill" style="width:${sp}%;background:${subA>bp?'#e74c3c':'#2980b9'}"></div></div>
-        <span style="font-size:11px;color:var(--gray)">${bp>0?Math.round(sp)+'%':'-'}</span></td>
-        <td class="tr ${subA>bp?'c-red':'c-green'}">${bp>0?(subA>bp?'超¥'+fmt(subA-bp):'余¥'+fmt(bp-subA)):'-'}</td>
-        <td><button class="btn btn-red btn-sm" onclick="delBudget('${cat}','${item.sub}')">删</button></td>
+  const b = S.budget;
+  const days = Math.max(1, Math.round((new Date(b.endDate)-new Date(b.startDate))/86400000)+1);
+
+  // normalise: items without currency default to CNY
+  b.items.forEach(x=>{ if(!x.currency) x.currency='CNY'; });
+
+  const cnyItems = b.items.filter(x=>x.currency==='CNY');
+  const usdItems = b.items.filter(x=>x.currency==='USD');
+  const hasUsd   = usdItems.length > 0;
+
+  const cnyTxns = filterTx({start:b.startDate, end:b.endDate, type:'支出', currency:'CNY'});
+  const usdTxns = filterTx({start:b.startDate, end:b.endDate, type:'支出', currency:'USD'});
+
+  const cnyBudget = cnyItems.reduce((s,x)=>s+(parseFloat(x.budget)||0), 0);
+  const usdBudget = usdItems.reduce((s,x)=>s+(parseFloat(x.budget)||0), 0);
+  const cnyActual = sumF(cnyTxns, 'exp');
+  const usdActual = sumF(usdTxns, 'exp');
+  const cnyRem = cnyBudget - cnyActual;
+  const usdRem = usdBudget - usdActual;
+
+  // build rows for one currency block
+  function buildRows(curr) {
+    const sym    = symFor(curr);
+    const txns   = curr==='CNY' ? cnyTxns : usdTxns;
+    const citems = curr==='CNY' ? cnyItems : usdItems;
+    let rows = '';
+    for (const cat of S.cats.expense) {
+      const ci = citems.filter(x=>x.cat===cat);
+      if (!ci.length) continue;
+      const catB = ci.reduce((s,x)=>s+(parseFloat(x.budget)||0), 0);
+      const catA = sumF(txns.filter(t=>t.cat===cat), 'exp');
+      const pct  = catB>0 ? Math.min(100, catA/catB*100) : 0;
+      rows += `<tr style="background:#f8f9fa;font-weight:600">
+        <td colspan="2" style="padding-left:8px">${cat}</td>
+        <td class="tr">${sym}${fmt(catB)}</td>
+        <td class="tr c-red">${sym}${fmt(catA)}</td>
+        <td><div class="prog-wrap"><div class="prog-fill" style="width:${pct}%;background:${catA>catB?'#e74c3c':'#27ae60'}"></div></div>
+        <span style="font-size:11px;color:var(--gray)">${Math.round(pct)}%</span></td>
+        <td class="tr ${catA>catB?'c-red':'c-green'}">${catA>catB?'超'+sym+fmt(catA-catB):'余'+sym+fmt(catB-catA)}</td>
+        <td><button class="btn btn-gray btn-sm" onclick="addBudgetSub('${cat}','${curr}')">+子项</button></td>
       </tr>`;
+      for (const item of ci) {
+        const subA = sumF(txns.filter(t=>t.cat===cat&&t.sub===item.sub), 'exp');
+        const bp = parseFloat(item.budget)||0, sp = bp>0?Math.min(100,subA/bp*100):0;
+        // escape single quotes in cat/sub for inline onclick
+        const esc = s => s.replace(/'/g,"\\'");
+        rows += `<tr>
+          <td style="padding-left:22px;color:var(--gray)">${item.sub||'(无子分类)'}</td>
+          <td><span class="badge-${curr==='USD'?'usd':'cny'}">${curr==='USD'?'$ USD':'¥ CNY'}</span></td>
+          <td><input type="number" value="${item.budget}" onchange="updBudget('${esc(cat)}','${esc(item.sub)}','${curr}',this.value)" style="width:85px"></td>
+          <td class="tr c-red">${sym}${fmt(subA)}</td>
+          <td><div class="prog-wrap"><div class="prog-fill" style="width:${sp}%;background:${subA>bp?'#e74c3c':'#2980b9'}"></div></div>
+          <span style="font-size:11px;color:var(--gray)">${bp>0?Math.round(sp)+'%':'-'}</span></td>
+          <td class="tr ${subA>bp?'c-red':'c-green'}">${bp>0?(subA>bp?'超'+sym+fmt(subA-bp):'余'+sym+fmt(bp-subA)):'-'}</td>
+          <td><button class="btn btn-red btn-sm" onclick="delBudget('${esc(cat)}','${esc(item.sub)}','${curr}')">删</button></td>
+        </tr>`;
+      }
     }
+    return rows;
   }
+
+  function budgetTable(curr) {
+    const sym    = symFor(curr);
+    const budget = curr==='CNY' ? cnyBudget : usdBudget;
+    const actual = curr==='CNY' ? cnyActual : usdActual;
+    const rem    = budget - actual;
+    const rows   = buildRows(curr);
+    const pct    = budget>0 ? Math.min(100, actual/budget*100) : 0;
+    return `<div class="card">
+      <div class="card-title">${curr==='USD'?'$ 美元预算':'¥ 人民币预算'}</div>
+      <div class="tbl-wrap"><table class="t">
+        <thead><tr><th>子分类</th><th>币种</th><th>预算</th><th class="tr">实际</th><th style="min-width:110px">进度</th><th class="tr">差额</th><th></th></tr></thead>
+        <tbody>${rows||`<tr><td colspan="7" style="text-align:center;padding:16px;color:var(--gray)">暂无预算项目</td></tr>`}</tbody>
+        <tfoot><tr><td colspan="2">合计</td>
+          <td>${sym}${fmt(budget)}</td>
+          <td class="tr c-red">${sym}${fmt(actual)}</td>
+          <td><div class="prog-wrap"><div class="prog-fill" style="width:${pct}%;background:${actual>budget?'#e74c3c':'#27ae60'}"></div></div></td>
+          <td class="tr ${rem>=0?'c-green':'c-red'}">${sym}${fmt(Math.abs(rem))}</td>
+          <td></td>
+        </tr></tfoot>
+      </table></div>
+    </div>`;
+  }
+
   return `
   <div class="card">
-    <div style="font-size:11px;color:var(--gray);margin-bottom:8px">预算仅统计人民币支出</div>
     <div class="row" style="margin-bottom:12px">
       <div class="fg"><label>开始日期</label><input type="date" value="${b.startDate}" onchange="updBudgetDate('start',this.value)"></div>
       <div class="fg"><label>结束日期</label><input type="date" value="${b.endDate}" onchange="updBudgetDate('end',this.value)"></div>
       <div class="fg"><label>发薪日</label><input type="number" value="${b.payDay}" min="1" max="31" onchange="S.budget.payDay=this.value;save()" style="width:60px"></div>
     </div>
     <div class="row">
-      <div class="sbox"><div class="snum">¥${fmt(totBudget)}</div><div class="slbl">本期预算</div></div>
-      <div class="sbox"><div class="snum c-red">¥${fmt(totActual)}</div><div class="slbl">实际支出</div></div>
-      <div class="sbox"><div class="snum ${rem>=0?'c-green':'c-red'}">¥${fmt(Math.abs(rem))}</div><div class="slbl">${rem>=0?'剩余':'超出'}</div></div>
-      <div class="sbox"><div class="snum">${totBudget>0?Math.round(totActual/totBudget*100):0}%</div><div class="slbl">使用率</div></div>
-      <div class="sbox"><div class="snum">¥${fmt(totBudget/days)}</div><div class="slbl">日均(${days}天)</div></div>
+      <div class="sbox"><div class="snum">¥${fmt(cnyBudget)}</div><div class="slbl">¥ 预算</div></div>
+      <div class="sbox"><div class="snum c-red">¥${fmt(cnyActual)}</div><div class="slbl">¥ 实际</div></div>
+      <div class="sbox"><div class="snum ${cnyRem>=0?'c-green':'c-red'}">¥${fmt(Math.abs(cnyRem))}</div><div class="slbl">${cnyRem>=0?'¥ 剩余':'¥ 超出'}</div></div>
+      <div class="sbox"><div class="snum">¥${fmt(cnyBudget/days)}</div><div class="slbl">¥ 日均</div></div>
+      ${hasUsd ? `
+      <div class="divider-usd"></div>
+      <div class="sbox"><div class="snum">$${fmt(usdBudget)}</div><div class="slbl">$ 预算</div></div>
+      <div class="sbox"><div class="snum c-red">$${fmt(usdActual)}</div><div class="slbl">$ 实际</div></div>
+      <div class="sbox"><div class="snum ${usdRem>=0?'c-green':'c-red'}">$${fmt(Math.abs(usdRem))}</div><div class="slbl">${usdRem>=0?'$ 剩余':'$ 超出'}</div></div>
+      <div class="sbox"><div class="snum">$${fmt(usdBudget/days)}</div><div class="slbl">$ 日均</div></div>
+      ` : ''}
     </div>
   </div>
-  <div class="card">
-    <div class="card-title">分类预算</div>
-    <div class="tbl-wrap"><table class="t">
-      <thead><tr><th>子分类</th><th></th><th>预算</th><th class="tr">实际</th><th style="min-width:120px">进度</th><th class="tr">差额</th><th></th></tr></thead>
-      <tbody>${rows}</tbody>
-      <tfoot><tr><td colspan="2">合计</td><td>¥${fmt(totBudget)}</td><td class="tr c-red">¥${fmt(totActual)}</td>
-        <td><div class="prog-wrap"><div class="prog-fill" style="width:${totBudget>0?Math.min(100,totActual/totBudget*100):0}%;background:${totActual>totBudget?'#e74c3c':'#27ae60'}"></div></div></td>
-        <td class="tr ${rem>=0?'c-green':'c-red'}">¥${fmt(Math.abs(rem))}</td><td></td>
-      </tr></tfoot>
-    </table></div>
-  </div>`;
+  ${budgetTable('CNY')}
+  ${hasUsd ? budgetTable('USD') : `
+  <div class="card" style="border:1px dashed var(--border);background:#fafafa;text-align:center;padding:20px;color:var(--gray);font-size:13px">
+    暂无美元预算项目 — 在人民币预算表中点「+子项」可切换为美元预算
+    <br><button class="btn btn-gray btn-sm mt8" onclick="addBudgetSub('生活基础','USD')">+ 新增美元预算项</button>
+  </div>`}`;
 }
 
 function updBudgetDate(w,v){S.budget[w==='start'?'startDate':'endDate']=v;save();document.getElementById('app-body').innerHTML=budgetHTML();}
-function updBudget(cat,sub,v){const it=S.budget.items.find(x=>x.cat===cat&&x.sub===sub);if(it){it.budget=parseFloat(v)||0;save();}}
-function addBudgetSub(cat){const sub=prompt(`在「${cat}」中新增子分类：`,'');if(!sub)return;S.budget.items.push({cat,sub,budget:0});save();document.getElementById('app-body').innerHTML=budgetHTML();}
-function delBudget(cat,sub){S.budget.items=S.budget.items.filter(x=>!(x.cat===cat&&x.sub===sub));save();document.getElementById('app-body').innerHTML=budgetHTML();}
+function updBudget(cat,sub,curr,v){
+  const it=S.budget.items.find(x=>x.cat===cat&&x.sub===sub&&(x.currency||'CNY')===curr);
+  if(it){it.budget=parseFloat(v)||0;save();}
+}
+function addBudgetSub(cat,curr='CNY'){
+  const sub=prompt(`在「${cat}」中新增${curr==='USD'?'美元':'人民币'}预算子分类：`,'');
+  if(!sub)return;
+  S.budget.items.push({cat,sub,currency:curr,budget:0});
+  save();document.getElementById('app-body').innerHTML=budgetHTML();
+}
+function delBudget(cat,sub,curr){
+  S.budget.items=S.budget.items.filter(x=>!(x.cat===cat&&x.sub===sub&&(x.currency||'CNY')===curr));
+  save();document.getElementById('app-body').innerHTML=budgetHTML();
+}
 
 // ═══════════════════════════════════════════════
 // TAB 6 · 自定义分类

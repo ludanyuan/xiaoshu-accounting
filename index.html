@@ -905,29 +905,14 @@ function assetsHTML() {
   }
 
   function sectionTable(items, isLiab, sid) {
-    const isCurrent = sid === 'current';
-    const sgOpts = ['现金','微信','支付宝','银行','应收','其他'];
     let rows='', lastSg='';
     for (let i=0; i<items.length; i++) {
       const r=items[i], ch=acctChange(r.name), end=isLiab?r.init-ch:r.init+ch;
       const sym = symFor(r.currency||'CNY');
-      let sgCell;
-      if (isCurrent) {
-        const sgSel = sgOpts.map(o=>`<option value="${o}" ${r.sg===o?'selected':''}>${o}</option>`).join('');
-        sgCell = `<td><select style="width:72px;font-size:12px;padding:3px 4px" onchange="updAssetSg('${sid}',${i},this.value)">${sgSel}</select></td>`;
-      } else {
-        sgCell = r.sg!==lastSg ? `<td style="font-weight:600;color:var(--gray);white-space:nowrap">${r.sg}</td>` : '<td></td>';
-        lastSg = r.sg;
-      }
-      let nameCell;
-      if (isCurrent) {
-        const acctOpts = S.cfg.accounts.map(a=>`<option value="${a}" ${r.name===a?'selected':''}>${a}</option>`).join('');
-        nameCell = `<td><select style="width:130px;font-size:12px;padding:3px 4px" onchange="updAssetName('${sid}',${i},this.value)">${acctOpts}</select></td>`;
-      } else {
-        nameCell = `<td><input style="width:120px" value="${r.name}" onchange="updAssetName('${sid}',${i},this.value)"></td>`;
-      }
+      const sgCell = r.sg!==lastSg ? `<td style="font-weight:600;color:var(--gray);white-space:nowrap">${r.sg}</td>` : '<td></td>';
+      lastSg = r.sg;
       rows += `<tr>${sgCell}
-        ${nameCell}
+        <td><input style="width:120px" value="${r.name}" onchange="updAssetName('${sid}',${i},this.value)"></td>
         <td>
           <select style="width:72px;font-size:12px;padding:3px 4px" onchange="updAssetCurrency('${sid}',${i},this.value)">
             <option value="CNY" ${(r.currency||'CNY')==='CNY'?'selected':''}>¥ CNY</option>
@@ -1014,7 +999,6 @@ function afterAssets(){
 function updAssetInit(sid,idx,v){S.assets[sid][idx].init=parseFloat(v)||0;save();}
 function updAssetNote(sid,idx,v){S.assets[sid][idx].note=v;save();}
 function updAssetName(sid,idx,v){S.assets[sid][idx].name=v;save();}
-function updAssetSg(sid,idx,v){S.assets[sid][idx].sg=v;save();}
 function updAssetCurrency(sid,idx,v){S.assets[sid][idx].currency=v;save();go('assets');}
 function delAssetRow(sid,idx){S.assets[sid].splice(idx,1);save();go('assets');}
 function addAssetRow(sid){S.assets[sid].push({sg:'新建',name:'新账户',currency:'CNY',init:0,note:''});save();go('assets');}

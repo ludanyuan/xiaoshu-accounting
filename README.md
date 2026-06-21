@@ -1,4 +1,4 @@
-# 🌙 月亮灯记账 · lucilune Accounting
+# 🌙 月亮灯记账 · lucilune accounting
 
 > 专为留学生设计的双币种记账工具 — 人民币和美元独立并存，互不干扰。
 >

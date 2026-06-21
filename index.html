@@ -999,9 +999,9 @@ function afterAssets(){
   ].filter(x=>x.value>0));
 }
 
-function updAssetInit(sid,idx,v){S.assets[sid][idx].init=parseFloat(v)||0;save();}
+function updAssetInit(sid,idx,v){S.assets[sid][idx].init=parseFloat(v)||0;save();go('assets');}
 function updAssetNote(sid,idx,v){S.assets[sid][idx].note=v;save();}
-function updAssetName(sid,idx,v){S.assets[sid][idx].name=v;save();}
+function updAssetName(sid,idx,v){S.assets[sid][idx].name=v;save();go('assets');}
 function updAssetSg(sid,idx,v){S.assets[sid][idx].sg=v;save();}
 function updAssetCurrency(sid,idx,v){S.assets[sid][idx].currency=v;save();go('assets');}
 function delAssetRow(sid,idx){S.assets[sid].splice(idx,1);save();go('assets');}
@@ -1127,7 +1127,7 @@ function budgetHTML(){
 function updBudgetDate(w,v){S.budget[w==='start'?'startDate':'endDate']=v;save();document.getElementById('app-body').innerHTML=budgetHTML();}
 function updBudget(cat,sub,field,v){
   const it=S.budget.items.find(x=>x.cat===cat&&x.sub===sub);
-  if(it){ it[field==='usd'?'usdBudget':'cnyBudget']=parseFloat(v)||0; save(); }
+  if(it){ it[field==='usd'?'usdBudget':'cnyBudget']=parseFloat(v)||0; save(); document.getElementById('app-body').innerHTML=budgetHTML(); }
 }
 function addBudgetSub(cat){
   const sub=prompt(`在「${cat}」中新增预算子分类名称：`,'');

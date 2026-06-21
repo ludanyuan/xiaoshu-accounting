@@ -1,41 +1,58 @@
 # 🌙 月亮灯记账
 
-A single-file personal accounting app — all CSS and JavaScript are inline, no external dependencies.  
-Data lives entirely in your browser's `localStorage`; nothing is sent anywhere.
+> 专为留学生设计的双币种记账工具 — 人民币和美元独立并存，互不干扰。
 
-**[Open the app](https://ludanyuan.github.io/xiaoshu-accounting/)**
+**[→ 打开网页版](https://ludanyuan.github.io/xiaoshu-accounting/)**
 
-## Features
+---
 
-| Tab | What it does |
-|-----|-------------|
-| 📒 收支记录 | Add / edit / delete transactions; each entry carries its own CNY or USD currency |
-| 📅 本月分析 | Monthly calendar heatmap + income/expense pie charts, split by ¥ / $ |
-| 📊 年度分析 | Annual totals, donut charts, grouped bar chart — ¥ and $ shown separately |
-| 🏦 资产盘点 | Balance sheet per currency: current assets, investments, fixed assets, liabilities, net worth |
-| 💰 预算管理 | Per sub-category budgets with paired ¥ / $ rows and progress bars |
-| ⚙️ 自定义分类 | Fully customisable income / expense / transfer categories, accounts, members, tags |
+## 为什么需要它
 
-- **Per-transaction CNY / USD** — each entry carries its own currency; all views split ¥ and $ automatically
-- **「↩ 本月」/「↩ 本年」** quick-jump buttons when browsing historical data
-- Export / import data as JSON for manual backup
+留学生的账本天然是双轨的：国内的生活费、家里转来的人民币、回国消费；美国这边的学费、房租、日常开销、兼职收入。大多数记账软件只能设一个主货币，混在一起记既不直观也容易出错。
 
-## Usage
+**月亮灯记账的解法：每一笔记录都独立携带自己的货币。** 所有分析视图自动按 ¥ / $ 分开展示，不换算、不合并、不折算汇率。
 
-Open `index.html` directly in any modern browser — no server required.  
-All changes auto-save to `localStorage`.
+---
 
-**Backup tip:** use the ⬇ Export button to download a `.json` snapshot.
+## 功能一览
+
+| 模块 | 说明 |
+|------|------|
+| 📒 收支记录 | 每笔支出/收入独立选择 ¥ 或 $，支持分类、账户、成员、标签 |
+| 📅 本月分析 | 日历热图 + 收支饼图，¥ 和 $ 各自独立统计 |
+| 📊 年度分析 | 年度汇总、环形图、分组柱状图，双币种并排展示 |
+| 🏦 资产盘点 | 流动资产 / 投资 / 固定资产 / 负债，每行独立选择币种，自动追踪账户变动 |
+| 💰 预算管理 | 每个子分类设 ¥ 和 $ 双预算，进度条实时显示 |
+| ⚙️ 自定义分类 | 收支分类、支付账户、成员、标签全部自定义 |
+
+---
+
+## 技术特点
+
+- **零依赖** — 单个 HTML 文件，CSS 和 JS 全部内联，无需安装，无需服务器
+- **数据本地** — 全部存在浏览器 `localStorage`，不上传、不联网、不注册
+- **直接打开** — 下载 `index.html`，双击即用；或访问网页版
+- **JSON 备份** — 内置导出 / 导入，随时备份迁移
+
+---
+
+## 快速开始
+
+1. 访问 **[网页版](https://ludanyuan.github.io/xiaoshu-accounting/)** 直接使用
+2. 或下载 `index.html`，在任意现代浏览器中双击打开
+
+数据自动保存。点击 ⬇ 导出按钮可下载 `.json` 快照作为备份。
+
+---
 
 ## Changelog
 
-### v1.0 — 2026-06-20
+### v1.1.0 — 2026-06-20
+- 资产盘点：类别可自定义命名，输入框 ghost 样式
+- 删除键统一为空心图标样式 🗑️
+- ¥ / $ 汇总分两行显示，列对齐优化
 
-- Initial release
-- 6 tabs: ledger, monthly analysis, annual analysis, assets, budget, category config
-- Dual-currency (CNY / USD) support throughout — per transaction, per asset row, per budget line
-- SVG charts (donut pie + grouped bar) with no external libraries
-- Budget redesigned as paired ¥/$ rows per sub-category
-- Fixed timezone bug in date filtering (`getFullYear` → string slice)
-- Monthly/annual views always open on current period; 「↩ 本月」/「↩ 本年」 buttons for history navigation
-- 🌙 emoji favicon
+### v1.0.0 — 2026-06-20
+- 初始发布：6 大模块全双币种支持
+- SVG 图表（无外部库）
+- 修复日期时区 bug，月度 / 年度视图默认跳转当前周期

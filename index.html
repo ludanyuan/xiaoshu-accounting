@@ -52,6 +52,8 @@ table.t td{padding:7px 10px;border-bottom:1px solid #f0f0f0;vertical-align:middl
 table.t tr:hover td{background:#fafafa}
 table.t tfoot td{background:var(--light);font-weight:700;border-top:2px solid var(--border)}
 .tr{text-align:right}.tc{text-align:center}
+table.t th.tr{text-align:right;padding-left:4px}
+table.t td.tr{padding-left:4px}
 .fg{display:flex;flex-direction:column;gap:3px}
 .fg label{font-size:11px;color:var(--gray);font-weight:600}
 input[type=text],input[type=date],input[type=number],select,textarea{
@@ -59,10 +61,13 @@ input[type=text],input[type=date],input[type=number],select,textarea{
   font-size:13px;color:var(--dark);font-family:inherit;background:#fff
 }
 input:focus,select:focus{outline:none;border-color:var(--blue)}
+.ghost-input{border:1px solid transparent;background:transparent;padding:4px 6px;border-radius:4px;cursor:text}
+.ghost-input:hover{border-color:var(--border);background:#fff}
+.ghost-input:focus{border-color:var(--blue);background:#fff;outline:none}
 .btn{padding:6px 14px;border:none;border-radius:4px;cursor:pointer;font-size:13px;font-family:inherit;transition:opacity .15s;white-space:nowrap}
 .btn:hover{opacity:.85}
 .btn-green{background:var(--green);color:#fff}
-.btn-red{background:var(--red);color:#fff}
+.btn-red{background:transparent;border:1.5px solid #e8a8a8;color:#b03030}
 .btn-gray{background:var(--light);color:var(--dark);border:1px solid var(--border)}
 .btn-blue{background:var(--blue);color:#fff}
 .btn-sm{padding:3px 8px;font-size:12px}
@@ -453,7 +458,7 @@ function ledgerHTML() {
       <td>${t.note||''}</td>
       <td>
         <button class="btn btn-gray btn-sm" onclick="openEdit('${t.id}')">编辑</button>
-        <button class="btn btn-red  btn-sm" onclick="delTx('${t.id}')">删</button>
+        <button class="btn btn-red  btn-sm" onclick="delTx('${t.id}')">🗑️</button>
       </td>
     </tr>`;
   }).join('') || `<tr><td colspan="12" style="text-align:center;padding:24px;color:var(--gray)">暂无记录，点击「记一笔」开始</td></tr>`;
@@ -909,21 +914,19 @@ function assetsHTML() {
     for (let i=0; i<items.length; i++) {
       const r=items[i], ch=acctChange(r.name), end=isLiab?r.init-ch:r.init+ch;
       const sym = symFor(r.currency||'CNY');
-      const sgCell = r.sg!==lastSg ? `<td style="font-weight:600;color:var(--gray);white-space:nowrap">${r.sg}</td>` : '<td></td>';
-      lastSg = r.sg;
+      const sgCell = `<td><input class="ghost-input" style="width:68px;font-weight:600;color:var(--gray)" value="${r.sg||''}" placeholder="类别" onchange="updAssetSg('${sid}',${i},this.value)"></td>`;
       rows += `<tr>${sgCell}
-        <td><input style="width:120px" value="${r.name}" onchange="updAssetName('${sid}',${i},this.value)"></td>
+        <td><input class="ghost-input" style="width:120px" value="${r.name}" onchange="updAssetName('${sid}',${i},this.value)"></td>
         <td>
           <select style="width:72px;font-size:12px;padding:3px 4px" onchange="updAssetCurrency('${sid}',${i},this.value)">
             <option value="CNY" ${(r.currency||'CNY')==='CNY'?'selected':''}>¥ CNY</option>
             <option value="USD" ${(r.currency||'CNY')==='USD'?'selected':''}>$ USD</option>
           </select>
         </td>
-        <td><input type="number" style="width:90px" value="${r.init}" onchange="updAssetInit('${sid}',${i},this.value)"></td>
-        <td class="tr ${ch>0?'c-green':ch<0?'c-red':''}">${ch!==0?sym+fmt(Math.abs(ch))+(ch<0?' ↓':' ↑'):'-'}</td>
+        <td><input class="ghost-input" type="number" style="width:90px" value="${r.init}" onchange="updAssetInit('${sid}',${i},this.value)"></td>
+        <td class="tc ${ch>0?'c-green':ch<0?'c-red':''}">${ch!==0?sym+fmt(Math.abs(ch))+(ch<0?' ↓':' ↑'):'-'}</td>
         <td class="tr" style="font-weight:600">${sym}${fmt(end)}</td>
-        <td><input style="width:110px" value="${r.note||''}" onchange="updAssetNote('${sid}',${i},this.value)"></td>
-        <td><button class="btn btn-red btn-sm" onclick="delAssetRow('${sid}',${i})">删</button></td>
+        <td><button class="btn btn-red btn-sm" onclick="delAssetRow('${sid}',${i})">🗑️</button></td>
       </tr>`;
     }
     return rows;
@@ -945,7 +948,7 @@ function assetsHTML() {
     return `<div class="card">
       <div class="card-title">${title} ${titleExtra}</div>
       <div class="tbl-wrap"><table class="t">
-        <thead><tr><th>类别</th><th>名称</th><th>币种</th><th>${th2}</th><th class="tr">${th3}</th><th class="tr">${th4}</th><th>备注</th><th></th></tr></thead>
+        <thead><tr><th>类别</th><th>名称</th><th>币种</th><th>${th2}</th><th class="tc">${th3}</th><th class="tr">${th4}</th><th></th></tr></thead>
         <tbody>${sectionTable(items,isLiab,sid)}</tbody>
       </table></div>
       <button class="btn btn-gray btn-sm mt8" onclick="addAssetRow('${sid}')">＋ 新增一行</button>
@@ -963,13 +966,13 @@ function assetsHTML() {
         <div class="sbox"><div class="snum c-green">¥${fmt(asC)}</div><div class="slbl">¥ 资产</div></div>
         <div class="sbox"><div class="snum c-red">¥${fmt(liC)}</div><div class="slbl">¥ 负债</div></div>
         <div class="sbox"><div class="snum c-blue">¥${fmt(asC-liC)}</div><div class="slbl">¥ 净资产</div></div>
-        ${hasUsdAssets ? `
-        <div class="divider-usd"></div>
+      </div>
+      ${hasUsdAssets ? `
+      <div class="row" style="margin-top:8px">
         <div class="sbox"><div class="snum c-green">$${fmt(asU)}</div><div class="slbl">$ 资产</div></div>
         <div class="sbox"><div class="snum c-red">$${fmt(liU)}</div><div class="slbl">$ 负债</div></div>
         <div class="sbox"><div class="snum c-blue">$${fmt(asU-liU)}</div><div class="slbl">$ 净资产</div></div>
-        ` : ''}
-      </div>
+      </div>` : ''}
     </div>
     <div class="card">
       <div class="card-title">资产结构</div>
@@ -999,6 +1002,7 @@ function afterAssets(){
 function updAssetInit(sid,idx,v){S.assets[sid][idx].init=parseFloat(v)||0;save();}
 function updAssetNote(sid,idx,v){S.assets[sid][idx].note=v;save();}
 function updAssetName(sid,idx,v){S.assets[sid][idx].name=v;save();}
+function updAssetSg(sid,idx,v){S.assets[sid][idx].sg=v;save();}
 function updAssetCurrency(sid,idx,v){S.assets[sid][idx].currency=v;save();go('assets');}
 function delAssetRow(sid,idx){S.assets[sid].splice(idx,1);save();go('assets');}
 function addAssetRow(sid){S.assets[sid].push({sg:'新建',name:'新账户',currency:'CNY',init:0,note:''});save();go('assets');}
@@ -1055,7 +1059,7 @@ function budgetHTML(){
           <span style="font-size:10px;color:var(--gray)">${cb>0?Math.round(cp)+'%':'-'}</span>
         </td>
         <td class="tr ${cnyA>cb?'c-red':'c-green'}" style="font-size:12px">${cb>0?(cnyA>cb?'超¥'+fmt(cnyA-cb):'余¥'+fmt(cb-cnyA)):'-'}</td>
-        <td rowspan="2" style="border-bottom:none"><button class="btn btn-red btn-sm" onclick="delBudget('${esc(cat)}','${esc(item.sub)}')">删</button></td>
+        <td rowspan="2" style="border-bottom:none"><button class="btn btn-red btn-sm" onclick="delBudget('${esc(cat)}','${esc(item.sub)}')">🗑️</button></td>
       </tr>
       <tr>
         <td><span class="badge-usd">$ USD</span></td>
